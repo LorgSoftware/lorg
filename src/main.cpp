@@ -19,7 +19,13 @@ int main(int argc, char* argv[])
         std::filesystem::path f(filepath);
         if(!std::filesystem::exists(f))
         {
-            std::cerr << "The file \"" << filepath << "\" does not exist." << std::endl;
+            std::cerr << "\"" << filepath << "\" does not exist." << std::endl;
+            exit(EXIT_CODE_ERROR_ARGUMENTS);
+        }
+        std::filesystem::file_status status = std::filesystem::status(f);
+        if(status.type() != std::filesystem::file_type::regular)
+        {
+            std::cerr << "\"" << filepath << "\" is not a valid file." << std::endl;
             exit(EXIT_CODE_ERROR_ARGUMENTS);
         }
     }
