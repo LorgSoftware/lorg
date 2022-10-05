@@ -1,6 +1,7 @@
 #include "lorg.hpp"
 
 #include <iostream>
+#include <stack>
 
 using namespace lorg;
 
@@ -67,9 +68,14 @@ struct StringStream
     }
 };
 
-bool is_whitespace(char const & c)
+inline bool is_whitespace(char const & c)
 {
     return c == ' ' || c == '\t';
+}
+
+inline bool is_end_of_line(char const & c)
+{
+    return c == '\n' || c == '\0';
 }
 
 void skip_whitespaces(StringStream & stream)
@@ -83,7 +89,7 @@ void skip_whitespaces(StringStream & stream)
 
 void skip_line(StringStream & stream)
 {
-    while(!stream.eof() && stream.peek() != '\n')
+    while(!is_end_of_line(stream.peek()))
     {
         stream.get();
     }
@@ -114,8 +120,56 @@ ParserResult lorg::parse(std::string const & content)
 
         if(c == NODE_DEFINITION_CHARACTER)
         {
+            // Keep the current line because maybe the node definition is
+            // ill-formed, and when we detect it the stream is pointing to the
+            // next line.
+            int current_line = stream.line;
+
+            // Get node level.
+            int level = 0;
+            while(c == NODE_DEFINITION_CHARACTER)
+            {
+                level++;
+                c = stream.get();
+            }
+
+            // Get node title.
+            if(is_whitespace(c))
+            {
+                skip_whitespaces(stream);
+            }
+            c = stream.get();
+            if(is_end_of_line(c))
+            {
+                result.has_error = true;
+                result.error_message = "Line " + std::to_string(current_line) + ": the node has no title.";
+                return result;
+            }
+            std::string title;
+            int trailing_space_count = 0;
+            while(!is_end_of_line(c))
+            {
+                title.push_back(c);
+                if(is_whitespace(c))
+                {
+                    trailing_space_count++;
+                }
+                else
+                {
+                    trailing_space_count = 0;
+                }
+                c = stream.get();
+            }
+            if(trailing_space_count > 0)
+            {
+                title.resize(title.size() - trailing_space_count);
+            }
+
+            // Check if the node level is correct compared to the previous node
+            // parsed level.
             std::cout << "Manage node definition at line " << stream.line << std::endl;
-            skip_line(stream);  // TODO: delete
+            std::cout << "  level: " << std::to_string(level) << std::endl;
+            std::cout << "  title: \"" << title << "\"" << std::endl;
         }
         else if(c == UNIT_DEFINITION_CHARACTER)
         {
