@@ -78,6 +78,8 @@ inline bool is_end_of_line(char const & c)
     return c == '\n' || c == '\0';
 }
 
+// Move the stream so the next time "get()" is called it returns something else
+// than a white space.
 void skip_whitespaces(StringStream & stream)
 {
     // No need to check EOF because stream returns '\0' when EOF.
@@ -87,12 +89,78 @@ void skip_whitespaces(StringStream & stream)
     }
 }
 
+// Move the stream so the next time "get()" is called it returns the first
+// character after the current line.
 void skip_line(StringStream & stream)
 {
     while(!is_end_of_line(stream.peek()))
     {
         stream.get();
     }
+}
+
+inline bool is_digit(char const & c)
+{
+    return (48 <= c && c <= 57);
+}
+
+bool is_unit_value_ok(std::string const & value)
+{
+    if(value.size() == 0)
+    {
+        return false;
+    }
+
+    size_t i = 0;
+    // Check if has sign.
+    if(value[0] == '-' || value[0] == '+')
+    {
+        i = 1;
+    }
+
+    // Check if has only digits or digits then a decimal point for floats.
+    for(; i < value.size(); i++)
+    {
+        char const & c = value[i];
+        if(is_digit(c))
+        {
+            continue;
+        }
+        else if(c == '.')
+        {
+            break;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    // Check if this is the definition of an integer.
+    if(i == value.size() && value[value.size()-1] != '.')
+    {
+        return true;
+    }
+
+    // Trailing points are not allowed.
+    if(i == value.size() - 1 && value[i] == '.')
+    {
+        return false;
+    }
+
+    // Check the decimals of the supposedly float.
+    for(i = i + 1; i < value.size(); i++)
+    {
+        if(is_digit(value[i]))
+        {
+            continue;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 std::string format_error(std::string const message, int line, int column = 0)
@@ -211,8 +279,123 @@ ParserResult lorg::parse(std::string const & content)
         }
         else if(c == UNIT_DEFINITION_CHARACTER)
         {
-            std::cout << "Manage unit definition at line " << stream.line << std::endl;
-            skip_line(stream);  // TODO: delete
+            // Keep the current line because maybe the node definition is
+            // ill-formed, and when we detect it the stream is pointing to the
+            // next line.
+            int current_line = stream.line;
+
+            // Get name.
+            c = stream.get();
+            if(is_end_of_line(c))
+            {
+                result.has_error = true;
+                result.error_message = format_error("The unit has no name nor value.", current_line);
+                return result;
+            }
+            if(is_whitespace(c))
+            {
+                skip_whitespaces(stream);
+            }
+            c = stream.get();
+            if(is_end_of_line(c))
+            {
+                result.has_error = true;
+                result.error_message = format_error("The unit has no name nor value.", current_line);
+                return result;
+            }
+            std::string name;
+            int trailing_space_count = 0;
+            while(!is_end_of_line(c) && c != UNIT_NAME_VALUE_SEPARATOR)
+            {
+                name.push_back(c);
+                if(is_whitespace(c))
+                {
+                    trailing_space_count++;
+                }
+                else
+                {
+                    trailing_space_count = 0;
+                }
+                c = stream.get();
+            }
+            if(trailing_space_count > 0)
+            {
+                name.resize(name.size() - trailing_space_count);
+            }
+
+            // Get value.
+            // The value should be in the format /[-+]?\d+(\.\d+)?/
+            if(is_end_of_line(c))
+            {
+                result.has_error = true;
+                result.error_message = format_error("The unit has no value.", current_line);
+                return result;
+            }
+
+            c = stream.get();  // Skip the UNIT_NAME_VALUE_SEPARATOR.
+            if(is_end_of_line(c))
+            {
+                result.has_error = true;
+                result.error_message = format_error("The unit has no value.", current_line);
+                return result;
+            }
+            if(is_whitespace(c))
+            {
+                skip_whitespaces(stream);
+            }
+            c = stream.get();
+            if(is_end_of_line(c))
+            {
+                result.has_error = true;
+                result.error_message = format_error("The unit has no value.", current_line);
+                return result;
+            }
+            std::string value_string;
+            int value_column = stream.column;
+            trailing_space_count = 0;
+            while(!is_end_of_line(c))
+            {
+                value_string.push_back(c);
+                if(is_whitespace(c))
+                {
+                    trailing_space_count++;
+                }
+                else
+                {
+                    trailing_space_count = 0;
+                }
+                c = stream.get();
+            }
+            if(trailing_space_count > 0)
+            {
+                name.resize(name.size() - trailing_space_count);
+            }
+            if(!is_unit_value_ok(value_string))
+            {
+                result.has_error = true;
+                result.error_message = format_error(
+                    "The unit value is incorrect.", current_line, value_column
+                );
+                return result;
+            }
+
+            // Check the unit defintion is not outside of a node. We prefer to
+            // do that after checking the syntax of the unit definition.
+            if(nodes_to_add.empty())
+            {
+                result.has_error = true;
+                result.error_message = format_error(
+                    "The unit defintion is outsite of a node.", current_line
+                );
+                return result;
+            }
+
+            Unit unit;
+            unit.name = name;
+            unit.value = std::stof(value_string);
+            unit.is_real = true;
+            unit.is_ignored = false;
+            nodes_to_add.top().units[unit.name] = unit;
         }
         else if(c == '\n')
         {

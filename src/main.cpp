@@ -64,6 +64,10 @@ int main(int argc, char* argv[])
         nodes_to_print.pop();
 
         std::cout << "Title: " << node.title << std::endl;
+        for(auto const & unit_pair : node.units)
+        {
+            std::cout << "  " << unit_pair.second.name << " = " << unit_pair.second.value << std::endl;
+        }
 
         for(int i = node.children.size() - 1; i >= 0; i--)
         {

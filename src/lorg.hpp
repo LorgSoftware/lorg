@@ -10,6 +10,7 @@ namespace lorg
 
 constexpr char NODE_DEFINITION_CHARACTER = '#';
 constexpr char UNIT_DEFINITION_CHARACTER = '$';
+constexpr char UNIT_NAME_VALUE_SEPARATOR = ':';
 
 struct Unit
 {
