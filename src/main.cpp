@@ -2,8 +2,11 @@
 #include <fstream>
 #include <iostream>
 
+#include "lorg.hpp"
+
 constexpr int EXIT_CODE_OK = 0;
 constexpr int EXIT_CODE_ERROR_ARGUMENTS = 1;
+constexpr int EXIT_CODE_ERROR_PARSE = 2;
 
 int main(int argc, char* argv[])
 {
@@ -42,7 +45,14 @@ int main(int argc, char* argv[])
         }
     }
 
-    std::cout << content << std::endl;
+    lorg::ParserResult result = lorg::parse(content);
+    if(result.has_error)
+    {
+        std::cerr << result.error_message << std::endl;
+        exit(EXIT_CODE_ERROR_PARSE);
+    }
+
+    std::cout << "Successfully parsed the content." << std::endl;
 
     return EXIT_CODE_OK;
 }

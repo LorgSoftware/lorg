@@ -15,5 +15,6 @@ endif()
 
 set(LORG_SOURCES
     src/main.cpp
+    src/lorg.cpp
 )
 add_executable(lorg ${LORG_SOURCES})
