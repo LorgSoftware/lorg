@@ -45,6 +45,7 @@ int main(int argc, char* argv[])
         }
     }
 
+    // Parse the content.
     lorg::ParserResult result = lorg::parse(content);
     if(result.has_error)
     {
