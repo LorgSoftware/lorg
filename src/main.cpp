@@ -1,5 +1,6 @@
-#include <iostream>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 
 constexpr int EXIT_CODE_OK = 0;
 constexpr int EXIT_CODE_ERROR_ARGUMENTS = 1;
@@ -29,6 +30,19 @@ int main(int argc, char* argv[])
             exit(EXIT_CODE_ERROR_ARGUMENTS);
         }
     }
+
+    // Get the file content.
+    std::string content;
+    {
+        std::ifstream f(filepath, std::ios::in);
+        char c;
+        while(f.get(c))
+        {
+            content.push_back(c);
+        }
+    }
+
+    std::cout << content << std::endl;
 
     return EXIT_CODE_OK;
 }
