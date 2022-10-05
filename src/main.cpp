@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stack>
 
 #include "lorg.hpp"
 
@@ -53,7 +54,23 @@ int main(int argc, char* argv[])
         exit(EXIT_CODE_ERROR_PARSE);
     }
 
-    std::cout << "Successfully parsed the content." << std::endl;
+    // Print the result
+    std::stack<lorg::Node> nodes_to_print;
+    nodes_to_print.push(result.total_node);
+
+    while(!nodes_to_print.empty())
+    {
+        auto node = nodes_to_print.top();
+        nodes_to_print.pop();
+
+        std::cout << "Title: " << node.title << std::endl;
+
+        for(int i = node.children.size() - 1; i >= 0; i--)
+        {
+            auto child = node.children[i];
+            nodes_to_print.push(child);
+        }
+    }
 
     return EXIT_CODE_OK;
 }
