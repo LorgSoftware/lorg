@@ -38,7 +38,6 @@ struct StringStream
     {
         if(eof())
         {
-            // NOTE: we do not manage the case really well here...
             return '\0';
         }
         char c = s[index];
@@ -59,7 +58,6 @@ struct StringStream
     {
         if(eof())
         {
-            // NOTE: we do not manage the case really well here...
             return '\0';
         }
         else
@@ -69,9 +67,26 @@ struct StringStream
     }
 };
 
-bool is_char_whitespace(char const & c)
+bool is_whitespace(char const & c)
 {
     return c == ' ' || c == '\t';
+}
+
+void skip_whitespaces(StringStream & stream)
+{
+    // No need to check EOF because stream returns '\0' when EOF.
+    while(is_whitespace(stream.peek()))
+    {
+        stream.get();
+    }
+}
+
+void skip_line(StringStream & stream)
+{
+    while(!stream.eof() && stream.peek() != '\n')
+    {
+        stream.get();
+    }
 }
 
 ParserResult lorg::parse(std::string const & content)
@@ -85,8 +100,36 @@ ParserResult lorg::parse(std::string const & content)
 
     while(!stream.eof())
     {
+        // Skip useless possible white spaces at the beginning of the line.
+        if(stream.column == 0 && is_whitespace(stream.peek()))
+        {
+            skip_whitespaces(stream);
+            if(stream.eof())
+            {
+                break;
+            }
+        }
+
         char c = stream.get();
-        // TODO
+
+        if(c == NODE_DEFINITION_CHARACTER)
+        {
+            std::cout << "Manage node definition at line " << stream.line << std::endl;
+            skip_line(stream);  // TODO: delete
+        }
+        else if(c == UNIT_DEFINITION_CHARACTER)
+        {
+            std::cout << "Manage unit definition at line " << stream.line << std::endl;
+            skip_line(stream);  // TODO: delete
+        }
+        else if(c == '\n')
+        {
+            continue;
+        }
+        else
+        {
+            skip_line(stream);
+        }
     }
 
     return result;

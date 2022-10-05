@@ -8,6 +8,9 @@
 namespace lorg
 {
 
+constexpr char NODE_DEFINITION_CHARACTER = '#';
+constexpr char UNIT_DEFINITION_CHARACTER = '$';
+
 struct Unit
 {
     // NOTE: would not it be better to reference the unit to a "unit
