@@ -104,6 +104,7 @@ inline bool is_digit(char const & c)
     return (48 <= c && c <= 57);
 }
 
+// The value should be in the format /[-+]?\d+(\.\d+)?/
 bool is_unit_value_ok(std::string const & value)
 {
     if(value.size() == 0)
@@ -174,7 +175,7 @@ std::string format_error(std::string const message, int line, int column = 0)
     return error_message;
 }
 
-ParserResult lorg::parse(std::string const & content)
+ParserResult convert_string_to_nodes(std::string const & content)
 {
     ParserResult result;
     result.has_error = false;
@@ -324,7 +325,6 @@ ParserResult lorg::parse(std::string const & content)
             }
 
             // Get value.
-            // The value should be in the format /[-+]?\d+(\.\d+)?/
             if(is_end_of_line(c))
             {
                 result.has_error = true;
@@ -419,5 +419,11 @@ ParserResult lorg::parse(std::string const & content)
         nodes_to_add.pop();
     }
 
+    return result;
+}
+
+ParserResult lorg::parse(std::string const & content)
+{
+    ParserResult result = convert_string_to_nodes(content);
     return result;
 }
