@@ -1,6 +1,7 @@
 #include "lorg.hpp"
 
 #include <iostream>
+#include <set>
 #include <stack>
 
 using namespace lorg;
@@ -66,6 +67,12 @@ struct StringStream
             return s[index];
         }
     }
+};
+
+struct ConvertStringToNodesResult
+{
+    ParserResult parser_result;
+    std::set<std::string> existing_units;
 };
 
 inline bool is_whitespace(char const & c)
@@ -175,12 +182,12 @@ std::string format_error(std::string const message, int line, int column = 0)
     return error_message;
 }
 
-ParserResult convert_string_to_nodes(std::string const & content)
+ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
 {
-    ParserResult result;
-    result.has_error = false;
+    ConvertStringToNodesResult result;
+    result.parser_result.has_error = false;
 
-    result.total_node.title = "TOTAL";
+    result.parser_result.total_node.title = "TOTAL";
 
     StringStream stream(content);
 
@@ -226,8 +233,10 @@ ParserResult convert_string_to_nodes(std::string const & content)
             c = stream.get();
             if(is_end_of_line(c))
             {
-                result.has_error = true;
-                result.error_message = format_error("The node has no title.", current_line);
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
+                    "The node has no title.", current_line
+                );
                 return result;
             }
             std::string title;
@@ -253,8 +262,8 @@ ParserResult convert_string_to_nodes(std::string const & content)
             // Manage hierarchy.
             if(level > nodes_to_add.size() + 1)
             {
-                result.has_error = true;
-                result.error_message = format_error(
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
                     "The node is not a direct descendant to any other node.", current_line
                 );
                 return result;
@@ -271,7 +280,7 @@ ParserResult convert_string_to_nodes(std::string const & content)
                 }
                 else
                 {
-                    result.total_node.children.push_back(other);
+                    result.parser_result.total_node.children.push_back(other);
                 }
             }
             Node current_node;
@@ -289,8 +298,10 @@ ParserResult convert_string_to_nodes(std::string const & content)
             c = stream.get();
             if(is_end_of_line(c))
             {
-                result.has_error = true;
-                result.error_message = format_error("The unit has no name nor value.", current_line);
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
+                    "The unit has no name nor value.", current_line
+                );
                 return result;
             }
             if(is_whitespace(c))
@@ -300,8 +311,10 @@ ParserResult convert_string_to_nodes(std::string const & content)
             c = stream.get();
             if(is_end_of_line(c))
             {
-                result.has_error = true;
-                result.error_message = format_error("The unit has no name nor value.", current_line);
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
+                    "The unit has no name nor value.", current_line
+                );
                 return result;
             }
             std::string name;
@@ -327,16 +340,20 @@ ParserResult convert_string_to_nodes(std::string const & content)
             // Get value.
             if(is_end_of_line(c))
             {
-                result.has_error = true;
-                result.error_message = format_error("The unit has no value.", current_line);
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
+                    "The unit has no value.", current_line
+                );
                 return result;
             }
 
             c = stream.get();  // Skip the UNIT_NAME_VALUE_SEPARATOR.
             if(is_end_of_line(c))
             {
-                result.has_error = true;
-                result.error_message = format_error("The unit has no value.", current_line);
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
+                    "The unit has no value.", current_line
+                );
                 return result;
             }
             if(is_whitespace(c))
@@ -346,8 +363,10 @@ ParserResult convert_string_to_nodes(std::string const & content)
             c = stream.get();
             if(is_end_of_line(c))
             {
-                result.has_error = true;
-                result.error_message = format_error("The unit has no value.", current_line);
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
+                    "The unit has no value.", current_line
+                );
                 return result;
             }
             std::string value_string;
@@ -372,8 +391,8 @@ ParserResult convert_string_to_nodes(std::string const & content)
             }
             if(!is_unit_value_ok(value_string))
             {
-                result.has_error = true;
-                result.error_message = format_error(
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
                     "The unit value is incorrect.", current_line, value_column
                 );
                 return result;
@@ -383,8 +402,8 @@ ParserResult convert_string_to_nodes(std::string const & content)
             // do that after checking the syntax of the unit definition.
             if(nodes_to_add.empty())
             {
-                result.has_error = true;
-                result.error_message = format_error(
+                result.parser_result.has_error = true;
+                result.parser_result.error_message = format_error(
                     "The unit defintion is outsite of a node.", current_line
                 );
                 return result;
@@ -396,6 +415,7 @@ ParserResult convert_string_to_nodes(std::string const & content)
             unit.is_real = true;
             unit.is_ignored = false;
             nodes_to_add.top().units[unit.name] = unit;
+            result.existing_units.insert(unit.name);
         }
         else if(c == '\n')
         {
@@ -415,15 +435,30 @@ ParserResult convert_string_to_nodes(std::string const & content)
             nodes_to_add.pop();
             nodes_to_add.top().children.push_back(other);
         }
-        result.total_node.children.push_back(nodes_to_add.top());
+        result.parser_result.total_node.children.push_back(nodes_to_add.top());
         nodes_to_add.pop();
     }
 
     return result;
 }
 
+void update_node_unit_values(Node & total_node)
+{
+
+}
+
 ParserResult lorg::parse(std::string const & content)
 {
-    ParserResult result = convert_string_to_nodes(content);
-    return result;
+    ConvertStringToNodesResult result = convert_string_to_nodes(content);
+    if(result.parser_result.has_error)
+    {
+        return result.parser_result;
+    }
+    std::cout << "Units defined:" << std::endl;
+    for(auto const & name : result.existing_units)
+    {
+        std::cout << "  " << name << std::endl;
+    }
+    // TODO: update_node_unit_values
+    return result.parser_result;
 }
