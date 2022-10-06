@@ -442,9 +442,63 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
     return result;
 }
 
-void update_node_unit_values(Node & total_node)
+void update_node_unit_values(
+    Node & node, std::set<std::string> existing_units,
+    std::set<std::string> units_to_ignore
+)
 {
+    std::map<std::string, Unit> & units = node.units;
 
+    // Add all missing units and define which ones need to be calculated.
+    std::set<std::string> units_to_calculate;
+    for(auto const & unit_name : existing_units)
+    {
+        if(units.find(unit_name) == units.end())
+        {
+            Unit unit;
+            unit.name = unit_name;
+            unit.value = 0.0f;
+            unit.is_ignored = false;
+            unit.is_real = false;
+            units[unit_name] = unit;
+            units_to_calculate.insert(unit_name);
+        }
+    }
+
+    // Ignore all units to ignore and set the one the children should ignore.
+    std::set<std::string> children_units_to_ignore;
+    for(auto & unit_pair : units)
+    {
+        Unit & unit = unit_pair.second;
+        if(units_to_ignore.find(unit.name) != units_to_ignore.end())
+        {
+            unit.is_ignored = true;
+            children_units_to_ignore.insert(unit.name);
+        }
+        if(unit.is_real)
+        {
+            children_units_to_ignore.insert(unit.name);
+        }
+    }
+
+    // Update the children.
+    for(Node & child : node.children)
+    {
+        update_node_unit_values(child, existing_units, children_units_to_ignore);
+    }
+
+    // Update the units to calculate.
+    for(Node & child : node.children)
+    {
+        for(auto & unit_pair : units)
+        {
+            Unit & unit = unit_pair.second;
+            if(!unit.is_real)
+            {
+                unit.value += child.units[unit.name].value;
+            }
+        }
+    }
 }
 
 ParserResult lorg::parse(std::string const & content)
@@ -454,11 +508,8 @@ ParserResult lorg::parse(std::string const & content)
     {
         return result.parser_result;
     }
-    std::cout << "Units defined:" << std::endl;
-    for(auto const & name : result.existing_units)
-    {
-        std::cout << "  " << name << std::endl;
-    }
-    // TODO: update_node_unit_values
+    update_node_unit_values(
+        result.parser_result.total_node, result.existing_units, {}
+    );
     return result.parser_result;
 }
