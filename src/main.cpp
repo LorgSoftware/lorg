@@ -9,6 +9,11 @@ constexpr int EXIT_CODE_OK = 0;
 constexpr int EXIT_CODE_ERROR_ARGUMENTS = 1;
 constexpr int EXIT_CODE_ERROR_PARSE = 2;
 
+struct CommandArguments
+{
+    std::string filepath;
+};
+
 // Container used to print the nodes. The goal is to avoid using recursion. The
 // structure contains information that would have been send as function
 // parameters if it was done in a recursive way.
@@ -23,7 +28,24 @@ struct PrintContainer
     }
 };
 
-std::string get_file_content_or_exit(char const * const filepath)
+
+CommandArguments parse_command_arguments_or_exit(int argc, char* argv[])
+{
+    // Check the argument count.
+    if(argc < 2)
+    {
+        std::cerr << "Need a file as an argument" << std::endl;
+        exit(EXIT_CODE_ERROR_ARGUMENTS);
+    }
+
+    CommandArguments arguments;
+
+    arguments.filepath = argv[1];
+
+    return arguments;
+}
+
+std::string get_file_content_or_exit(std::string const filepath)
 {
     // Check if file exists.
     {
@@ -112,14 +134,8 @@ void print_simple(std::vector<lorg::Node*> const root_nodes)
 
 int main(int argc, char* argv[])
 {
-    // Check the argument count.
-    if(argc < 2)
-    {
-        std::cerr << "Need a file as an argument" << std::endl;
-        exit(EXIT_CODE_ERROR_ARGUMENTS);
-    }
-
-    std::string content = get_file_content_or_exit(argv[1]);
+    CommandArguments arguments = parse_command_arguments_or_exit(argc, argv);
+    std::string content = get_file_content_or_exit(arguments.filepath);
 
     // Parse the content.
     lorg::ParserResult result = lorg::parse(content);
