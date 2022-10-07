@@ -71,7 +71,7 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         {
             config.display_total_node = false;
         }
-        else if(are_equal(argv[i], "--no-indent") || are_equal(argv[i], "-ni"))
+        else if(are_equal(argv[i], "--no-indent") || are_equal(argv[i], "-nin"))
         {
             config.add_indent = false;
         }
