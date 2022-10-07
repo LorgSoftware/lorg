@@ -16,6 +16,7 @@ struct Config
     bool hide_ignored_and_calculated = false;
     bool display_total_node = true;
     bool add_indent = true;
+    bool prettify = false;
 };
 
 struct CommandArguments
@@ -32,8 +33,16 @@ struct PrintContainer
     lorg::Node const & node;
     int const level;
 
-    PrintContainer(lorg::Node const & node, int const level):
-        node(node), level(level)
+    // "has_next_sibling" and "prefix_from_parent" are useful for pretty print.
+    bool const has_next_sibling;
+    std::string const prefix_from_parent;
+
+    PrintContainer(
+        lorg::Node const & node, int const level,
+        bool has_next_sibling=false, std::string prefix_from_parent=""
+    ):
+        node(node), level(level),
+        has_next_sibling(has_next_sibling), prefix_from_parent(prefix_from_parent)
     {
     }
 };
@@ -74,6 +83,10 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         else if(are_equal(argv[i], "--no-indent") || are_equal(argv[i], "-nin"))
         {
             config.add_indent = false;
+        }
+        else if(are_equal(argv[i], "--prettify") || are_equal(argv[i], "-p"))
+        {
+            config.prettify = true;
         }
         else
         {
@@ -124,6 +137,29 @@ std::string get_file_content_or_exit(std::string const filepath)
     return content;
 }
 
+inline bool should_hide_unit(lorg::Unit const & unit, Config const & config)
+{
+    return (
+        (unit.is_ignored && config.hide_ignored) ||
+        ((unit.is_ignored && !unit.is_real) && config.hide_ignored_and_calculated)
+    );
+}
+
+// We do not want to override the "<<" operator just for that. It makes
+// semantically no sense.
+void cout_unit(std::ostream & o, lorg::Unit const & unit)
+{
+    o << "$ " << unit.name << ": " << unit.value;
+    if(!unit.is_real)
+    {
+        o << " [Calculated]";
+    }
+    if(unit.is_ignored)
+    {
+        o << " [Ignored]";
+    }
+}
+
 void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & config)
 {
     std::stack<PrintContainer> nodes_to_print;
@@ -161,10 +197,7 @@ void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & conf
         for(auto const & unit_pair : node.units)
         {
             lorg::Unit const & unit = unit_pair.second;
-            if(
-                (unit.is_ignored && config.hide_ignored) ||
-                ((unit.is_ignored && !unit.is_real) && config.hide_ignored_and_calculated)
-            )
+            if(should_hide_unit(unit, config))
             {
                 continue;
             }
@@ -172,15 +205,7 @@ void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & conf
             {
                 std::cout << indentation << "  ";
             }
-            std::cout << "$ " << unit.name << ": " << unit.value;
-            if(!unit.is_real)
-            {
-                std::cout << " [Calculated]";
-            }
-            if(unit.is_ignored)
-            {
-                std::cout << " [Ignored]";
-            }
+            cout_unit(std::cout, unit);
             std::cout << std::endl;
         }
 
@@ -189,6 +214,82 @@ void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & conf
         {
             auto const & child = *it;
             nodes_to_print.push(PrintContainer(child, level + 1));
+        }
+    }
+}
+
+void print_pretty(std::vector<lorg::Node*> const root_nodes, Config const & config)
+{
+    std::stack<PrintContainer> nodes_to_print;
+    for(auto it = root_nodes.crbegin(); it != root_nodes.crend(); it++)
+    {
+        nodes_to_print.push(PrintContainer(**it, 1));
+    }
+    while(!nodes_to_print.empty())
+    {
+        PrintContainer current = nodes_to_print.top();
+        nodes_to_print.pop();
+        lorg::Node const & node = current.node;
+        int const & level = current.level;
+        bool const & has_next_sibling = current.has_next_sibling;
+        std::string const & prefix_from_parent = current.prefix_from_parent;
+
+        // Print the title.
+        if(level == 1)
+        {
+            std::cout << node.title << std::endl;
+        }
+        else
+        {
+            if(has_next_sibling)
+            {
+                std::cout << prefix_from_parent << "├── " << node.title << std::endl;
+            }
+            else
+            {
+                std::cout << prefix_from_parent << "└── " << node.title << std::endl;
+            }
+        }
+
+        // Set up the prefix for the children.
+        std::string prefix_for_next_lines;
+        if(level > 1)
+        {
+            std::string to_add = has_next_sibling ? "│   " : "    ";
+            prefix_for_next_lines = prefix_from_parent + to_add;
+        }
+
+        // Print the units.
+        for(auto const & unit_pair : node.units)
+        {
+            lorg::Unit const & unit = unit_pair.second;
+            if(should_hide_unit(unit, config))
+            {
+                continue;
+            }
+            if(node.children.empty())
+            {
+                std::cout << prefix_for_next_lines << "  ";
+            }
+            else
+            {
+                std::cout << prefix_for_next_lines << "│ ";
+            }
+            cout_unit(std::cout, unit);
+            std::cout << std::endl;
+        }
+
+        // Add the children for printing.
+        if(!node.children.empty())
+        {
+            auto it = node.children.crbegin();
+            nodes_to_print.push(PrintContainer(*it, level + 1, false, prefix_for_next_lines));
+            it++;
+            for(; it != node.children.crend(); it++)
+            {
+                auto const & child = *it;
+                nodes_to_print.push(PrintContainer(child, level + 1, true, prefix_for_next_lines));
+            }
         }
     }
 }
@@ -220,7 +321,14 @@ int main(int argc, char* argv[])
             root_nodes.push_back(&child);
         }
     }
-    print_simple(root_nodes, config);
+    if(config.prettify)
+    {
+        print_pretty(root_nodes, config);
+    }
+    else
+    {
+        print_simple(root_nodes, config);
+    }
 
     return EXIT_CODE_OK;
 }
