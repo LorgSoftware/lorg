@@ -15,6 +15,7 @@ struct Config
     bool hide_ignored = false;
     bool hide_ignored_and_calculated = false;
     bool display_total_node = true;
+    bool add_indent = true;
 };
 
 struct CommandArguments
@@ -69,6 +70,10 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         else if(are_equal(argv[i], "--no-total") || are_equal(argv[i], "-nt"))
         {
             config.display_total_node = false;
+        }
+        else if(are_equal(argv[i], "--no-indent") || are_equal(argv[i], "-ni"))
+        {
+            config.add_indent = false;
         }
         else
         {
@@ -136,9 +141,12 @@ void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & conf
         std::string indentation;
         // NOTE: could we use a dynamic string or a map of levels instead
         // of looping?
-        for(int i = 0; i < level - 1; i++)
+        if(config.add_indent)
         {
-            indentation += "  ";
+            for(int i = 0; i < level - 1; i++)
+            {
+                indentation += "  ";
+            }
         }
 
         // Print the title.
@@ -160,7 +168,10 @@ void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & conf
             {
                 continue;
             }
-            std::cout << indentation << "  ";
+            if(config.add_indent)
+            {
+                std::cout << indentation << "  ";
+            }
             std::cout << "$ " << unit.name << ": " << unit.value;
             if(!unit.is_real)
             {
