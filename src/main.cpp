@@ -9,6 +9,20 @@ constexpr int EXIT_CODE_OK = 0;
 constexpr int EXIT_CODE_ERROR_ARGUMENTS = 1;
 constexpr int EXIT_CODE_ERROR_PARSE = 2;
 
+// Container used to print the nodes. The goal is to avoid using recursion. The
+// structure contains information that would have been send as function
+// parameters if it was done in a recursive way.
+struct PrintContainer
+{
+    lorg::Node const & node;
+    int const level;
+
+    PrintContainer(lorg::Node const & node, int const level):
+        node(node), level(level)
+    {
+    }
+};
+
 int main(int argc, char* argv[])
 {
     // Check the argument count.
@@ -54,25 +68,47 @@ int main(int argc, char* argv[])
         exit(EXIT_CODE_ERROR_PARSE);
     }
 
-    // Print the result
-    std::stack<lorg::Node> nodes_to_print;
-    nodes_to_print.push(result.total_node);
-
-    while(!nodes_to_print.empty())
+    // Print the result.
     {
-        auto node = nodes_to_print.top();
-        nodes_to_print.pop();
-
-        std::cout << "Title: " << node.title << std::endl;
-        for(auto const & unit_pair : node.units)
+        std::stack<PrintContainer> nodes_to_print;
+        nodes_to_print.push(PrintContainer(result.total_node, 1));
+        while(!nodes_to_print.empty())
         {
-            std::cout << "  " << unit_pair.second.name << " = " << unit_pair.second.value << std::endl;
-        }
+            PrintContainer current = nodes_to_print.top();
+            nodes_to_print.pop();
+            lorg::Node const & node = current.node;
+            int const & level = current.level;
 
-        for(int i = node.children.size() - 1; i >= 0; i--)
-        {
-            auto child = node.children[i];
-            nodes_to_print.push(child);
+            std::string indentation;
+            // NOTE: could we use a dynamic string or a map of levels instead
+            // of looping?
+            for(int i = 0; i < level - 1; i++)
+            {
+                indentation += "  ";
+            }
+
+            // Print the title.
+            std::cout << indentation;
+            for(int i = 0; i < level; i++)
+            {
+                std::cout << '#';
+            }
+            std::cout << " " << node.title << std::endl;
+
+            // Print the units.
+            for(auto const & unit_pair : node.units)
+            {
+                lorg::Unit const & unit = unit_pair.second;
+                std::cout << indentation << "  ";
+                std::cout << "$ " << unit.name << ": " << unit.value << std::endl;
+            }
+
+            // Add the children for printing.
+            for(auto it = node.children.crbegin(); it != node.children.crend(); it++)
+            {
+                auto const & child = *it;
+                nodes_to_print.push(PrintContainer(child, level + 1));
+            }
         }
     }
 
