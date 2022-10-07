@@ -54,6 +54,62 @@ std::string get_file_content_or_exit(char const * const filepath)
     return content;
 }
 
+void print_simple(std::vector<lorg::Node*> const root_nodes)
+{
+    std::stack<PrintContainer> nodes_to_print;
+    for(auto it = root_nodes.crbegin(); it != root_nodes.crend(); it++)
+    {
+        nodes_to_print.push(PrintContainer(**it, 1));
+    }
+    while(!nodes_to_print.empty())
+    {
+        PrintContainer current = nodes_to_print.top();
+        nodes_to_print.pop();
+        lorg::Node const & node = current.node;
+        int const & level = current.level;
+
+        std::string indentation;
+        // NOTE: could we use a dynamic string or a map of levels instead
+        // of looping?
+        for(int i = 0; i < level - 1; i++)
+        {
+            indentation += "  ";
+        }
+
+        // Print the title.
+        std::cout << indentation;
+        for(int i = 0; i < level; i++)
+        {
+            std::cout << '#';
+        }
+        std::cout << " " << node.title << std::endl;
+
+        // Print the units.
+        for(auto const & unit_pair : node.units)
+        {
+            lorg::Unit const & unit = unit_pair.second;
+            std::cout << indentation << "  ";
+            std::cout << "$ " << unit.name << ": " << unit.value;
+            if(!unit.is_real)
+            {
+                std::cout << " [Calculated]";
+            }
+            if(unit.is_ignored)
+            {
+                std::cout << " [Ignored]";
+            }
+            std::cout << std::endl;
+        }
+
+        // Add the children for printing.
+        for(auto it = node.children.crbegin(); it != node.children.crend(); it++)
+        {
+            auto const & child = *it;
+            nodes_to_print.push(PrintContainer(child, level + 1));
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
     // Check the argument count.
@@ -74,57 +130,7 @@ int main(int argc, char* argv[])
     }
 
     // Print the result.
-    {
-        std::stack<PrintContainer> nodes_to_print;
-        nodes_to_print.push(PrintContainer(result.total_node, 1));
-        while(!nodes_to_print.empty())
-        {
-            PrintContainer current = nodes_to_print.top();
-            nodes_to_print.pop();
-            lorg::Node const & node = current.node;
-            int const & level = current.level;
-
-            std::string indentation;
-            // NOTE: could we use a dynamic string or a map of levels instead
-            // of looping?
-            for(int i = 0; i < level - 1; i++)
-            {
-                indentation += "  ";
-            }
-
-            // Print the title.
-            std::cout << indentation;
-            for(int i = 0; i < level; i++)
-            {
-                std::cout << '#';
-            }
-            std::cout << " " << node.title << std::endl;
-
-            // Print the units.
-            for(auto const & unit_pair : node.units)
-            {
-                lorg::Unit const & unit = unit_pair.second;
-                std::cout << indentation << "  ";
-                std::cout << "$ " << unit.name << ": " << unit.value;
-                if(!unit.is_real)
-                {
-                    std::cout << " [Calculated]";
-                }
-                if(unit.is_ignored)
-                {
-                    std::cout << " [Ignored]";
-                }
-                std::cout << std::endl;
-            }
-
-            // Add the children for printing.
-            for(auto it = node.children.crbegin(); it != node.children.crend(); it++)
-            {
-                auto const & child = *it;
-                nodes_to_print.push(PrintContainer(child, level + 1));
-            }
-        }
-    }
+    print_simple({ &(result.total_node) });
 
     return EXIT_CODE_OK;
 }
