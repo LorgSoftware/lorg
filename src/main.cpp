@@ -12,7 +12,8 @@ constexpr int EXIT_CODE_ERROR_PARSE = 2;
 
 struct Config
 {
-    bool display_ignored = true;
+    bool hide_ignored = false;
+    bool hide_ignored_and_calculated = false;
 };
 
 struct CommandArguments
@@ -58,7 +59,11 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
     {
         if(are_equal(argv[i], "--no-ignored") || are_equal(argv[i], "-nig"))
         {
-            config.display_ignored = false;
+            config.hide_ignored = true;
+        }
+        else if(are_equal(argv[i], "--no-ignored-and-calculated") || are_equal(argv[i], "-nic"))
+        {
+            config.hide_ignored_and_calculated = true;
         }
         else
         {
@@ -143,7 +148,10 @@ void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & conf
         for(auto const & unit_pair : node.units)
         {
             lorg::Unit const & unit = unit_pair.second;
-            if(unit.is_ignored && !config.display_ignored)
+            if(
+                (unit.is_ignored && config.hide_ignored) ||
+                ((unit.is_ignored && !unit.is_real) && config.hide_ignored_and_calculated)
+            )
             {
                 continue;
             }
