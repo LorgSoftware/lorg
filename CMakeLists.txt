@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message("Using GNU compiler: setting strong requirements for building.")
-    add_compile_options(-Wall -Wextra -pedantic)
+    add_compile_options(-Wall -Wextra -pedantic -Wconversion)
 else()
     message("Compiler used: ${CMAKE_CXX_COMPILER_ID}")
     message("No extra options added.")
