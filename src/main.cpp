@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <stack>
+#include <string>
 
 #include "lorg.hpp"
 
@@ -9,9 +10,15 @@ constexpr int EXIT_CODE_OK = 0;
 constexpr int EXIT_CODE_ERROR_ARGUMENTS = 1;
 constexpr int EXIT_CODE_ERROR_PARSE = 2;
 
+struct Config
+{
+    bool display_ignored = true;
+};
+
 struct CommandArguments
 {
     std::string filepath;
+    Config config;
 };
 
 // Container used to print the nodes. The goal is to avoid using recursion. The
@@ -28,8 +35,13 @@ struct PrintContainer
     }
 };
 
+// Useful for comparing "argv[i]" with a litteral string.
+bool are_equal(char const * const str1, std::string && str2)
+{
+    return str2.compare(str1) == 0;
+}
 
-CommandArguments parse_command_arguments_or_exit(int argc, char* argv[])
+CommandArguments parse_command_arguments_or_exit(int argc, char const * const argv[])
 {
     // Check the argument count.
     if(argc < 2)
@@ -39,18 +51,26 @@ CommandArguments parse_command_arguments_or_exit(int argc, char* argv[])
     }
 
     CommandArguments arguments;
+    Config & config = arguments.config;
 
     int i = 1;
     while(i < argc)
     {
-        if(arguments.filepath.empty())
+        if(are_equal(argv[i], "--no-ignored") || are_equal(argv[i], "-nig"))
         {
-            arguments.filepath = argv[i];
+            config.display_ignored = false;
         }
         else
         {
-            std::cerr << "Only one file at a time can be parsed." << std::endl;
-            exit(EXIT_CODE_ERROR_ARGUMENTS);
+            if(arguments.filepath.empty())
+            {
+                arguments.filepath = argv[i];
+            }
+            else
+            {
+                std::cerr << "Only one file at a time can be parsed." << std::endl;
+                exit(EXIT_CODE_ERROR_ARGUMENTS);
+            }
         }
         i++;
     }
@@ -89,7 +109,7 @@ std::string get_file_content_or_exit(std::string const filepath)
     return content;
 }
 
-void print_simple(std::vector<lorg::Node*> const root_nodes)
+void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & config)
 {
     std::stack<PrintContainer> nodes_to_print;
     for(auto it = root_nodes.crbegin(); it != root_nodes.crend(); it++)
@@ -123,6 +143,10 @@ void print_simple(std::vector<lorg::Node*> const root_nodes)
         for(auto const & unit_pair : node.units)
         {
             lorg::Unit const & unit = unit_pair.second;
+            if(unit.is_ignored && !config.display_ignored)
+            {
+                continue;
+            }
             std::cout << indentation << "  ";
             std::cout << "$ " << unit.name << ": " << unit.value;
             if(!unit.is_real)
@@ -159,7 +183,7 @@ int main(int argc, char* argv[])
     }
 
     // Print the result.
-    print_simple({ &(result.total_node) });
+    print_simple({ &(result.total_node) }, arguments.config);
 
     return EXIT_CODE_OK;
 }
