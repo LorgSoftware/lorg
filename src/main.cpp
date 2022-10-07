@@ -100,7 +100,16 @@ int main(int argc, char* argv[])
             {
                 lorg::Unit const & unit = unit_pair.second;
                 std::cout << indentation << "  ";
-                std::cout << "$ " << unit.name << ": " << unit.value << std::endl;
+                std::cout << "$ " << unit.name << ": " << unit.value;
+                if(!unit.is_real)
+                {
+                    std::cout << " [Calculated]";
+                }
+                if(unit.is_ignored)
+                {
+                    std::cout << " [Ignored]";
+                }
+                std::cout << std::endl;
             }
 
             // Add the children for printing.
