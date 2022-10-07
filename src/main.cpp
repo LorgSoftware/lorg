@@ -14,6 +14,7 @@ struct Config
 {
     bool hide_ignored = false;
     bool hide_ignored_and_calculated = false;
+    bool display_total_node = true;
 };
 
 struct CommandArguments
@@ -64,6 +65,10 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         else if(are_equal(argv[i], "--no-ignored-and-calculated") || are_equal(argv[i], "-nic"))
         {
             config.hide_ignored_and_calculated = true;
+        }
+        else if(are_equal(argv[i], "--no-total") || are_equal(argv[i], "-nt"))
+        {
+            config.display_total_node = false;
         }
         else
         {
@@ -191,7 +196,20 @@ int main(int argc, char* argv[])
     }
 
     // Print the result.
-    print_simple({ &(result.total_node) }, arguments.config);
+    Config const & config = arguments.config;
+    std::vector<lorg::Node *> root_nodes;
+    if(config.display_total_node)
+    {
+        root_nodes.push_back(&(result.total_node));
+    }
+    else
+    {
+        for(auto & child : result.total_node.children)
+        {
+            root_nodes.push_back(&child);
+        }
+    }
+    print_simple(root_nodes, config);
 
     return EXIT_CODE_OK;
 }
