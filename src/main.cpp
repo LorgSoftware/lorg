@@ -40,7 +40,20 @@ CommandArguments parse_command_arguments_or_exit(int argc, char* argv[])
 
     CommandArguments arguments;
 
-    arguments.filepath = argv[1];
+    int i = 1;
+    while(i < argc)
+    {
+        if(arguments.filepath.empty())
+        {
+            arguments.filepath = argv[i];
+        }
+        else
+        {
+            std::cerr << "Only one file at a time can be parsed." << std::endl;
+            exit(EXIT_CODE_ERROR_ARGUMENTS);
+        }
+        i++;
+    }
 
     return arguments;
 }
