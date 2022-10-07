@@ -17,6 +17,7 @@ struct Config
     bool display_total_node = true;
     bool add_indent = true;
     bool prettify = false;
+    std::string total_name = "TOTAL";
 };
 
 struct CommandArguments
@@ -87,6 +88,19 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         else if(are_equal(argv[i], "--prettify") || are_equal(argv[i], "-p"))
         {
             config.prettify = true;
+        }
+        else if(are_equal(argv[i], "--total-name") || are_equal(argv[i], "-tn"))
+        {
+            i++;
+            if(i < argc)
+            {
+                arguments.config.total_name = argv[i];
+            }
+            else
+            {
+                std::cerr << "The option " << argv[i-1] << " requires an argument." << std::endl;
+                exit(EXIT_CODE_ERROR_ARGUMENTS);
+            }
         }
         else
         {
@@ -306,9 +320,10 @@ int main(int argc, char* argv[])
         std::cerr << result.error_message << std::endl;
         exit(EXIT_CODE_ERROR_PARSE);
     }
+    Config const & config = arguments.config;
+    result.total_node.title = config.total_name;
 
     // Print the result.
-    Config const & config = arguments.config;
     std::vector<lorg::Node *> root_nodes;
     if(config.display_total_node)
     {
