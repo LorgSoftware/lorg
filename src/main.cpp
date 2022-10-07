@@ -23,25 +23,17 @@ struct PrintContainer
     }
 };
 
-int main(int argc, char* argv[])
+std::string get_file_content_or_exit(char const * const filepath)
 {
-    // Check the argument count.
-    if(argc < 2)
-    {
-        std::cerr << "Need a file as an argument" << std::endl;
-        exit(EXIT_CODE_ERROR_ARGUMENTS);
-    }
-
     // Check if file exists.
-    auto filepath = argv[1];
     {
-        std::filesystem::path f(filepath);
-        if(!std::filesystem::exists(f))
+        std::filesystem::path path(filepath);
+        if(!std::filesystem::exists(path))
         {
             std::cerr << "\"" << filepath << "\" does not exist." << std::endl;
             exit(EXIT_CODE_ERROR_ARGUMENTS);
         }
-        std::filesystem::file_status status = std::filesystem::status(f);
+        std::filesystem::file_status status = std::filesystem::status(path);
         if(status.type() != std::filesystem::file_type::regular)
         {
             std::cerr << "\"" << filepath << "\" is not a valid file." << std::endl;
@@ -52,13 +44,26 @@ int main(int argc, char* argv[])
     // Get the file content.
     std::string content;
     {
-        std::ifstream f(filepath, std::ios::in);
+        std::ifstream stream(filepath, std::ios::in);
         char c;
-        while(f.get(c))
+        while(stream.get(c))
         {
             content.push_back(c);
         }
     }
+    return content;
+}
+
+int main(int argc, char* argv[])
+{
+    // Check the argument count.
+    if(argc < 2)
+    {
+        std::cerr << "Need a file as an argument" << std::endl;
+        exit(EXIT_CODE_ERROR_ARGUMENTS);
+    }
+
+    std::string content = get_file_content_or_exit(argv[1]);
 
     // Parse the content.
     lorg::ParserResult result = lorg::parse(content);
