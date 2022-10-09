@@ -1,4 +1,4 @@
-#include <filesystem>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <stack>
@@ -122,32 +122,36 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
 
 std::string get_file_content_or_exit(std::string const filepath)
 {
-    // Check if file exists.
+    // NOTE: we do not use `filesystem` because this is not at all portable. For
+    // some moronic reasons some people thought it was a great idea to sometime
+    // put that in `<filesystem>` and sometime in `<experimental/filesystem>`.
+    // At the end even if the correct inclusion is done, some components of
+    // `filesystem` like `path` does not exist. Or maybe it does but must
+    // include in the build process options like `-lstdc++fs` to work; but it
+    // did not work when we try.
+    // We have other stuff to do in our life rather than fixing some stupid
+    // issues like that. We use `cstdio` and the C standard library like any
+    // sane person will do.
+    FILE* f = std::fopen(filepath.c_str(), "r");
+
+    // Check if file can be read.
+    if(f == NULL)
     {
-        std::filesystem::path path(filepath);
-        if(!std::filesystem::exists(path))
-        {
-            std::cerr << "\"" << filepath << "\" does not exist." << std::endl;
-            exit(EXIT_CODE_ERROR_ARGUMENTS);
-        }
-        std::filesystem::file_status status = std::filesystem::status(path);
-        if(status.type() != std::filesystem::file_type::regular)
-        {
-            std::cerr << "\"" << filepath << "\" is not a valid file." << std::endl;
-            exit(EXIT_CODE_ERROR_ARGUMENTS);
-        }
+        std::cerr << "\"" << filepath << "\" cannot be read." << std::endl;
+        exit(EXIT_CODE_ERROR_ARGUMENTS);
     }
 
     // Get the file content.
     std::string content;
     {
-        std::ifstream stream(filepath, std::ios::in);
-        char c;
-        while(stream.get(c))
+        int c = std::fgetc(f);
+        while(c != EOF)
         {
-            content.push_back(c);
+            content.push_back(static_cast<char>(c));
+            c = std::fgetc(f);
         }
     }
+    std::fclose(f);
     return content;
 }
 
