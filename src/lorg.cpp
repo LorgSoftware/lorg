@@ -182,6 +182,37 @@ std::string format_error(std::string const message, int line, int column = 0)
     return error_message;
 }
 
+// `first_char` is needed because we often detect the need of getting the rest
+// of the line after checking the first character.
+// After this function ran, `stream.get()` returns the first character after
+// the line.
+std::string get_rest_of_line_without_trailing_spaces(
+    StringStream stream, const char first_char
+)
+{
+    std::string content;
+    char c = first_char;
+    int trailing_space_count = 0;
+    while(!is_end_of_line(c))
+    {
+        content.push_back(c);
+        if(is_whitespace(c))
+        {
+            trailing_space_count++;
+        }
+        else
+        {
+            trailing_space_count = 0;
+        }
+        c = stream.get();
+    }
+    if(trailing_space_count > 0)
+    {
+        content.resize(content.size() - trailing_space_count);
+    }
+    return content;
+}
+
 ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
 {
     ConvertStringToNodesResult result;
@@ -240,25 +271,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
                 );
                 return result;
             }
-            std::string title;
-            int trailing_space_count = 0;
-            while(!is_end_of_line(c))
-            {
-                title.push_back(c);
-                if(is_whitespace(c))
-                {
-                    trailing_space_count++;
-                }
-                else
-                {
-                    trailing_space_count = 0;
-                }
-                c = stream.get();
-            }
-            if(trailing_space_count > 0)
-            {
-                title.resize(title.size() - trailing_space_count);
-            }
+            std::string title = get_rest_of_line_without_trailing_spaces(stream, c);
 
             // Manage hierarchy.
             if(level > nodes_to_add.size() + 1)
@@ -370,26 +383,8 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
                 );
                 return result;
             }
-            std::string value_string;
             int value_column = stream.column;
-            trailing_space_count = 0;
-            while(!is_end_of_line(c))
-            {
-                value_string.push_back(c);
-                if(is_whitespace(c))
-                {
-                    trailing_space_count++;
-                }
-                else
-                {
-                    trailing_space_count = 0;
-                }
-                c = stream.get();
-            }
-            if(trailing_space_count > 0)
-            {
-                name.resize(name.size() - trailing_space_count);
-            }
+            std::string value_string = get_rest_of_line_without_trailing_spaces(stream, c);
             if(!is_unit_value_ok(value_string))
             {
                 result.parser_result.has_error = true;
