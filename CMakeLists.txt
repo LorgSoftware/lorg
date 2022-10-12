@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(Lorg)
 
+set(CMAKE_DEBUG_POSTFIX -debug)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
@@ -18,3 +19,4 @@ set(LORG_SOURCES
     src/lorg.cpp
 )
 add_executable(lorg ${LORG_SOURCES})
+set_target_properties(lorg PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})

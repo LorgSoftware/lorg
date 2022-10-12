@@ -1,3 +1,5 @@
-build
 file.lorg
+build
 lorg
+build-debug
+lorg-debug
