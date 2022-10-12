@@ -1,5 +1,6 @@
 #include "lorg.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <set>
 #include <stack>
@@ -182,6 +183,27 @@ std::string format_error(std::string const message, int line, int column = 0)
     return error_message;
 }
 
+std::string get_error_message_ill_formed_unit_definition(int line)
+{
+    std::string error_message = format_error(
+        "The unit definition is ill-formed.", line
+    );
+    error_message += "\nThe unit defintion should follow this format:";
+    error_message += "\n    $ UNIT_NAME : UNIT_VALUE";
+    return error_message;
+}
+
+ConvertStringToNodesResult create_ConvertStringToNodesResult_error(
+    std::string error_message
+)
+{
+    ConvertStringToNodesResult result;
+    result.parser_result.has_error = true;
+    result.parser_result.error_message = error_message;
+    return result;
+}
+
+
 // `first_char` is needed because we often detect the need of getting the rest
 // of the line after checking the first character.
 // After this function ran, `stream.get()` returns the first character after
@@ -211,6 +233,38 @@ std::string get_rest_of_line_without_trailing_spaces(
         content.resize(content.size() - trailing_space_count);
     }
     return content;
+}
+
+// Returns a substring from `start` included to `end` excluded. Trim the spaces.
+std::string get_substring_without_leading_trailing_spaces(
+    std::string const & str, size_t start, size_t end
+)
+{
+    assert(start <= end);
+    assert(start < str.size());
+    assert(end <= str.size());
+    std::string substring;
+    // Skip leading spaces.
+    while(is_whitespace(str[start]) && start < end)
+    {
+        start++;
+    }
+    // All characters were white spaces.
+    if(start == end)
+    {
+        return substring;
+    }
+    // Skip trailing spaces.
+    while(is_whitespace(str[end-1]) && start < end)
+    {
+        end--;
+    }
+    // Return the substring.
+    for(size_t i = start; i < end; i++)
+    {
+        substring.push_back(str[i]);
+    }
+    return substring;
 }
 
 ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
@@ -308,99 +362,82 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             // next line.
             int current_line = stream.line;
 
+            int start_colum = stream.column;
+
+            // We get all the line immediately because unit names can contain
+            // `UNIT_NAME_VALUE_SEPARATOR`.
+            skip_whitespaces(stream);
+            std::string definition = get_rest_of_line_without_trailing_spaces(stream, stream.get());
+            if(definition.empty())
+            {
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_ill_formed_unit_definition(current_line)
+                );
+            }
+
+            // We get the last `UNIT_NAME_VALUE_SEPARATOR` index so it is sure
+            // that everything before it is part of the unit name.
+            size_t separator_index = definition.size() - 1;
+            {
+                for(; separator_index > 0; separator_index--)
+                {
+                    if(definition[separator_index] == UNIT_NAME_VALUE_SEPARATOR)
+                    {
+                        break;
+                    }
+                }
+                if(definition[separator_index] != UNIT_NAME_VALUE_SEPARATOR)
+                {
+                    return create_ConvertStringToNodesResult_error(
+                        get_error_message_ill_formed_unit_definition(current_line)
+                    );
+                }
+            }
+            // The only thing in the node definition is `UNIT_DEFINITION_CHARACTER`
+            if(definition.size() == 1)
+            {
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_ill_formed_unit_definition(current_line)
+                );
+            }
+
             // Get name.
-            c = stream.get();
-            if(is_end_of_line(c))
+            std::string name = get_substring_without_leading_trailing_spaces(
+                definition, 0, separator_index
+            );
+            if(name.empty())
             {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The unit has no name nor value.", current_line
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_ill_formed_unit_definition(current_line)
                 );
-                return result;
-            }
-            if(is_whitespace(c))
-            {
-                skip_whitespaces(stream);
-            }
-            c = stream.get();
-            if(is_end_of_line(c))
-            {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The unit has no name nor value.", current_line
-                );
-                return result;
-            }
-            std::string name;
-            int trailing_space_count = 0;
-            while(!is_end_of_line(c) && c != UNIT_NAME_VALUE_SEPARATOR)
-            {
-                name.push_back(c);
-                if(is_whitespace(c))
-                {
-                    trailing_space_count++;
-                }
-                else
-                {
-                    trailing_space_count = 0;
-                }
-                c = stream.get();
-            }
-            if(trailing_space_count > 0)
-            {
-                name.resize(name.size() - trailing_space_count);
             }
 
             // Get value.
-            if(is_end_of_line(c))
+            std::string value_string = get_substring_without_leading_trailing_spaces(
+                definition, separator_index + 1, definition.size()
+            );
+            if(value_string.empty())
             {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The unit has no value.", current_line
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_ill_formed_unit_definition(current_line)
                 );
-                return result;
             }
-
-            c = stream.get();  // Skip the UNIT_NAME_VALUE_SEPARATOR.
-            if(is_end_of_line(c))
-            {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The unit has no value.", current_line
-                );
-                return result;
-            }
-            if(is_whitespace(c))
-            {
-                skip_whitespaces(stream);
-            }
-            c = stream.get();
-            if(is_end_of_line(c))
-            {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The unit has no value.", current_line
-                );
-                return result;
-            }
-            int value_column = stream.column;
-            std::string value_string = get_rest_of_line_without_trailing_spaces(stream, c);
             if(!is_unit_value_ok(value_string))
             {
                 result.parser_result.has_error = true;
                 result.parser_result.error_message = format_error(
-                    "The unit value is incorrect.", current_line, value_column
+                    "The unit value is incorrect.", current_line
                 );
                 return result;
             }
 
-            // Check the unit defintion is not outside of a node. We prefer to
+            // Check the unit definition is not outside of a node. We prefer to
             // do that after checking the syntax of the unit definition.
             if(nodes_to_add.empty())
             {
                 result.parser_result.has_error = true;
                 result.parser_result.error_message = format_error(
-                    "The unit defintion is outsite of a node.", current_line
+                    "The unit definition is outsite of a node.", current_line
                 );
                 return result;
             }
