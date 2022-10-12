@@ -183,7 +183,21 @@ std::string format_error(std::string const message, int line, int column = 0)
     return error_message;
 }
 
-std::string get_error_message_ill_formed_unit_definition(int line)
+std::string get_error_message_node_without_title(int line)
+{
+    return format_error(
+        "The node has no title.", line
+    );
+}
+
+std::string get_error_message_node_without_direct_parent(int line)
+{
+    return format_error(
+        "The node is not a direct descendant to any other node.", line
+    );
+}
+
+std::string get_error_message_unit_definition_ill_formed(int line)
 {
     std::string error_message = format_error(
         "The unit definition is ill-formed.", line
@@ -191,6 +205,20 @@ std::string get_error_message_ill_formed_unit_definition(int line)
     error_message += "\nThe unit defintion should follow this format:";
     error_message += "\n    $ UNIT_NAME : UNIT_VALUE";
     return error_message;
+}
+
+std::string get_error_message_unit_value_incorrect(int line)
+{
+    return format_error(
+        "The unit value is incorrect.", line
+    );
+}
+
+std::string get_error_message_unit_outside_node(int line)
+{
+    return format_error(
+        "The unit definition is outsite of a node.", line
+    );
 }
 
 ConvertStringToNodesResult create_ConvertStringToNodesResult_error(
@@ -319,22 +347,18 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             c = stream.get();
             if(is_end_of_line(c))
             {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The node has no title.", current_line
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_node_without_title(current_line)
                 );
-                return result;
             }
             std::string title = get_rest_of_line_without_trailing_spaces(stream, c);
 
             // Manage hierarchy.
             if(level > nodes_to_add.size() + 1)
             {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The node is not a direct descendant to any other node.", current_line
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_node_without_direct_parent(current_line)
                 );
-                return result;
             }
             while(level < nodes_to_add.size() + 1)
             {
@@ -362,8 +386,6 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             // next line.
             int current_line = stream.line;
 
-            int start_colum = stream.column;
-
             // We get all the line immediately because unit names can contain
             // `UNIT_NAME_VALUE_SEPARATOR`.
             skip_whitespaces(stream);
@@ -371,7 +393,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             if(definition.empty())
             {
                 return create_ConvertStringToNodesResult_error(
-                    get_error_message_ill_formed_unit_definition(current_line)
+                    get_error_message_unit_definition_ill_formed(current_line)
                 );
             }
 
@@ -389,7 +411,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
                 if(definition[separator_index] != UNIT_NAME_VALUE_SEPARATOR)
                 {
                     return create_ConvertStringToNodesResult_error(
-                        get_error_message_ill_formed_unit_definition(current_line)
+                        get_error_message_unit_definition_ill_formed(current_line)
                     );
                 }
             }
@@ -397,7 +419,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             if(definition.size() == 1)
             {
                 return create_ConvertStringToNodesResult_error(
-                    get_error_message_ill_formed_unit_definition(current_line)
+                    get_error_message_unit_definition_ill_formed(current_line)
                 );
             }
 
@@ -408,7 +430,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             if(name.empty())
             {
                 return create_ConvertStringToNodesResult_error(
-                    get_error_message_ill_formed_unit_definition(current_line)
+                    get_error_message_unit_definition_ill_formed(current_line)
                 );
             }
 
@@ -419,27 +441,23 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             if(value_string.empty())
             {
                 return create_ConvertStringToNodesResult_error(
-                    get_error_message_ill_formed_unit_definition(current_line)
+                    get_error_message_unit_definition_ill_formed(current_line)
                 );
             }
             if(!is_unit_value_ok(value_string))
             {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The unit value is incorrect.", current_line
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_unit_definition_ill_formed(current_line)
                 );
-                return result;
             }
 
             // Check the unit definition is not outside of a node. We prefer to
             // do that after checking the syntax of the unit definition.
             if(nodes_to_add.empty())
             {
-                result.parser_result.has_error = true;
-                result.parser_result.error_message = format_error(
-                    "The unit definition is outsite of a node.", current_line
+                return create_ConvertStringToNodesResult_error(
+                    get_error_message_unit_definition_ill_formed(current_line)
                 );
-                return result;
             }
 
             Unit unit;
