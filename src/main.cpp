@@ -6,12 +6,15 @@
 
 #include "lorg.hpp"
 
+#define VERSION "1.0"
+
 constexpr int EXIT_CODE_OK = 0;
 constexpr int EXIT_CODE_ERROR_ARGUMENTS = 1;
 constexpr int EXIT_CODE_ERROR_PARSE = 2;
 
 struct Config
 {
+    bool print_version = false;
     bool hide_ignored = false;
     bool hide_ignored_and_calculated = false;
     bool display_total_node = true;
@@ -69,7 +72,11 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
     int i = 1;
     while(i < argc)
     {
-        if(are_equal(argv[i], "--no-ignored") || are_equal(argv[i], "-nig"))
+        if(are_equal(argv[i], "--version") || are_equal(argv[i], "-v"))
+        {
+            config.print_version = true;
+        }
+        else if(are_equal(argv[i], "--no-ignored") || are_equal(argv[i], "-nig"))
         {
             config.hide_ignored = true;
         }
@@ -315,6 +322,16 @@ void print_pretty(std::vector<lorg::Node*> const root_nodes, Config const & conf
 int main(int argc, char* argv[])
 {
     CommandArguments arguments = parse_command_arguments_or_exit(argc, argv);
+    Config const & config = arguments.config;
+
+    if(config.print_version)
+    {
+        std::cout << VERSION << std::endl;
+        // There is no need to do anything else. It should not be a correct
+        // behaviour to use the `--version` option with other options.
+        exit(0);
+    }
+
     std::string content = get_file_content_or_exit(arguments.filepath);
 
     // Parse the content.
@@ -324,7 +341,6 @@ int main(int argc, char* argv[])
         std::cerr << result.error_message << std::endl;
         exit(EXIT_CODE_ERROR_PARSE);
     }
-    Config const & config = arguments.config;
     result.total_node.title = config.total_name;
 
     // Print the result.
