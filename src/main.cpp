@@ -185,7 +185,7 @@ void cout_unit(std::ostream & o, lorg::Unit const & unit)
     }
 }
 
-void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & config)
+void print_simple(std::vector<lorg::Node const *> const root_nodes, Config const & config)
 {
     std::stack<PrintContainer> nodes_to_print;
     for(auto it = root_nodes.crbegin(); it != root_nodes.crend(); it++)
@@ -238,12 +238,12 @@ void print_simple(std::vector<lorg::Node*> const root_nodes, Config const & conf
         for(auto it = node.children.crbegin(); it != node.children.crend(); it++)
         {
             auto const & child = *it;
-            nodes_to_print.push(PrintContainer(child, level + 1));
+            nodes_to_print.push(PrintContainer(*child, level + 1));
         }
     }
 }
 
-void print_pretty(std::vector<lorg::Node*> const root_nodes, Config const & config)
+void print_pretty(std::vector<lorg::Node const *> const root_nodes, Config const & config)
 {
     std::stack<PrintContainer> nodes_to_print;
     for(auto it = root_nodes.crbegin(); it != root_nodes.crend(); it++)
@@ -308,12 +308,12 @@ void print_pretty(std::vector<lorg::Node*> const root_nodes, Config const & conf
         if(!node.children.empty())
         {
             auto it = node.children.crbegin();
-            nodes_to_print.push(PrintContainer(*it, level + 1, false, prefix_for_next_lines));
+            nodes_to_print.push(PrintContainer(**it, level + 1, false, prefix_for_next_lines));
             it++;
             for(; it != node.children.crend(); it++)
             {
                 auto const & child = *it;
-                nodes_to_print.push(PrintContainer(child, level + 1, true, prefix_for_next_lines));
+                nodes_to_print.push(PrintContainer(*child, level + 1, true, prefix_for_next_lines));
             }
         }
     }
@@ -341,19 +341,19 @@ int main(int argc, char* argv[])
         std::cerr << result.error_message << std::endl;
         exit(EXIT_CODE_ERROR_PARSE);
     }
-    result.total_node.title = config.total_name;
+    result.total_node->title = config.total_name;
 
     // Print the result.
-    std::vector<lorg::Node *> root_nodes;
+    std::vector<lorg::Node const *> root_nodes;
     if(config.display_total_node)
     {
-        root_nodes.push_back(&(result.total_node));
+        root_nodes.push_back(result.total_node.get());
     }
     else
     {
-        for(auto & child : result.total_node.children)
+        for(auto & child : result.total_node->children)
         {
-            root_nodes.push_back(&child);
+            root_nodes.push_back(child.get());
         }
     }
     if(config.prettify)

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <stack>
 
@@ -299,8 +300,9 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
 {
     ConvertStringToNodesResult result;
     result.parser_result.has_error = false;
+    result.parser_result.total_node = std::make_unique<Node>();
 
-    Node & total_node = result.parser_result.total_node;
+    Node & total_node = *(result.parser_result.total_node);
     total_node.title = "TOTAL";
 
     StringStream stream(content);
@@ -308,7 +310,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
     // Contain the node currently being parsed. We use a stack to avoid
     // unnecessary recursion. The stack size represents the level of the node
     // on top. The node below it is its direct parent.
-    std::stack<Node> nodes_to_add;
+    std::stack<std::unique_ptr<Node>> nodes_to_add;
 
     while(!stream.eof())
     {
@@ -364,20 +366,20 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             {
                 // Moving the siblings and nephews until the top of the stack
                 // is the direct parent of the current node.
-                Node other = nodes_to_add.top();
+                std::unique_ptr<Node> other = std::move(nodes_to_add.top());
                 nodes_to_add.pop();
                 if(nodes_to_add.size() > 0)
                 {
-                    nodes_to_add.top().children.push_back(other);
+                    nodes_to_add.top()->children.push_back(std::move(other));
                 }
                 else
                 {
-                    total_node.children.push_back(other);
+                    total_node.children.push_back(std::move(other));
                 }
             }
-            Node current_node;
-            current_node.title = title;
-            nodes_to_add.push(current_node);
+            auto current_node = std::make_unique<Node>();
+            current_node->title = title;
+            nodes_to_add.push(std::move(current_node));
         }
         else if(c == UNIT_DEFINITION_CHARACTER)
         {
@@ -465,7 +467,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             unit.value = std::stof(value_string);
             unit.is_real = true;
             unit.is_ignored = false;
-            nodes_to_add.top().units[unit.name] = unit;
+            nodes_to_add.top()->units[unit.name] = unit;
             result.existing_units.insert(unit.name);
         }
         else if(c == '\n')
@@ -482,11 +484,11 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
     {
         while(nodes_to_add.size() > 1)
         {
-            Node other = nodes_to_add.top();
+            std::unique_ptr<Node> other = std::move(nodes_to_add.top());
             nodes_to_add.pop();
-            nodes_to_add.top().children.push_back(other);
+            nodes_to_add.top()->children.push_back(std::move(other));
         }
-        total_node.children.push_back(nodes_to_add.top());
+        total_node.children.push_back(std::move(nodes_to_add.top()));
         nodes_to_add.pop();
     }
 
@@ -533,20 +535,20 @@ void update_node_unit_values(
     }
 
     // Update the children.
-    for(Node & child : node.children)
+    for(std::unique_ptr<Node> & child : node.children)
     {
-        update_node_unit_values(child, existing_units, children_units_to_ignore);
+        update_node_unit_values(*child, existing_units, children_units_to_ignore);
     }
 
     // Update the units to calculate.
-    for(Node & child : node.children)
+    for(std::unique_ptr<Node> & child : node.children)
     {
         for(auto & unit_pair : units)
         {
             Unit & unit = unit_pair.second;
             if(!unit.is_real)
             {
-                unit.value += child.units[unit.name].value;
+                unit.value += child->units[unit.name].value;
             }
         }
     }
@@ -557,10 +559,10 @@ ParserResult lorg::parse(std::string const & content)
     ConvertStringToNodesResult result = convert_string_to_nodes(content);
     if(result.parser_result.has_error)
     {
-        return result.parser_result;
+        return std::move(result.parser_result);
     }
     update_node_unit_values(
-        result.parser_result.total_node, result.existing_units, {}
+        *(result.parser_result.total_node), result.existing_units, {}
     );
-    return result.parser_result;
+    return std::move(result.parser_result);
 }

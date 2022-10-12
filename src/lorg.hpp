@@ -2,6 +2,7 @@
 #define LORG_HPP
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -29,10 +30,7 @@ struct Unit
 
 struct Node
 {
-    // NOTE: it is maybe not the best way to define the children. Every time a
-    // node will be added to its parent, it and all its descendant will be
-    // copied. This is very inefficient.
-    std::vector<Node> children;
+    std::vector<std::unique_ptr<Node>> children;
 
     std::string title;
 
@@ -50,7 +48,7 @@ struct ParserResult
     std::string error_message;
 
     // Hold the calculation for all the parsed nodes.
-    Node total_node;
+    std::unique_ptr<Node> total_node;
 };
 
 ParserResult parse(std::string const & content);
