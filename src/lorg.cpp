@@ -187,7 +187,8 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
     ConvertStringToNodesResult result;
     result.parser_result.has_error = false;
 
-    result.parser_result.total_node.title = "TOTAL";
+    Node & total_node = result.parser_result.total_node;
+    total_node.title = "TOTAL";
 
     StringStream stream(content);
 
@@ -280,7 +281,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
                 }
                 else
                 {
-                    result.parser_result.total_node.children.push_back(other);
+                    total_node.children.push_back(other);
                 }
             }
             Node current_node;
@@ -435,7 +436,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             nodes_to_add.pop();
             nodes_to_add.top().children.push_back(other);
         }
-        result.parser_result.total_node.children.push_back(nodes_to_add.top());
+        total_node.children.push_back(nodes_to_add.top());
         nodes_to_add.pop();
     }
 
