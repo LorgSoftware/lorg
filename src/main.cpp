@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -249,7 +250,11 @@ void cout_unit(std::ostream & o, lorg::Unit const & unit)
     }
 }
 
-void print_simple(std::vector<lorg::Node const *> const root_nodes, Config const & config)
+void print_simple(
+    std::vector<lorg::Node const *> const root_nodes,
+    std::vector<std::string> const & sorted_unit_names,
+    Config const & config
+)
 {
     std::stack<PrintContainer> nodes_to_print;
     for(auto it = root_nodes.crbegin(); it != root_nodes.crend(); it++)
@@ -283,9 +288,9 @@ void print_simple(std::vector<lorg::Node const *> const root_nodes, Config const
         std::cout << " " << node.title << std::endl;
 
         // Print the units.
-        for(auto const & unit_pair : node.units)
+        for(auto const & name : sorted_unit_names)
         {
-            lorg::Unit const & unit = unit_pair.second;
+            lorg::Unit const & unit = node.units.at(name);
             if(should_hide_unit(unit, config))
             {
                 continue;
@@ -307,7 +312,11 @@ void print_simple(std::vector<lorg::Node const *> const root_nodes, Config const
     }
 }
 
-void print_pretty(std::vector<lorg::Node const *> const root_nodes, Config const & config)
+void print_pretty(
+    std::vector<lorg::Node const *> const root_nodes,
+    std::vector<std::string> const & sorted_unit_names,
+    Config const & config
+)
 {
     std::stack<PrintContainer> nodes_to_print;
     for(auto it = root_nodes.crbegin(); it != root_nodes.crend(); it++)
@@ -349,9 +358,9 @@ void print_pretty(std::vector<lorg::Node const *> const root_nodes, Config const
         }
 
         // Print the units.
-        for(auto const & unit_pair : node.units)
+        for(auto const & name : sorted_unit_names)
         {
-            lorg::Unit const & unit = unit_pair.second;
+            lorg::Unit const & unit = node.units.at(name);
             if(should_hide_unit(unit, config))
             {
                 continue;
@@ -390,7 +399,6 @@ inline std::string to_string(bool const v)
 
 void print_json_unit(lorg::Unit const & unit)
 {
-    // NOTE: Print the unit value in alphabetical order?
     // NOTE: Instead of escaping that everytime, maybe we should map the unit
     // names with escaped unit names.
     std::string escaped_unit_name = escape_json(unit.name);
@@ -402,7 +410,9 @@ void print_json_unit(lorg::Unit const & unit)
     std::cout << "}";
 }
 
-void print_json_node(lorg::Node const & node)
+void print_json_node(
+    lorg::Node const & node, std::vector<std::string> const & sorted_unit_names
+)
 {
     std::cout << "{";
     // Print title.
@@ -414,10 +424,10 @@ void print_json_node(lorg::Node const & node)
     {
         for(size_t i = 0; i < node.children.size() - 1; i++)
         {
-            print_json_node(*(node.children[i]));
+            print_json_node(*(node.children[i]), sorted_unit_names);
             std::cout << ",";
         }
-        print_json_node(*(node.children[node.children.size()-1]));
+        print_json_node(*(node.children[node.children.size()-1]), sorted_unit_names);
     }
     std::cout << "]";
 
@@ -426,10 +436,10 @@ void print_json_node(lorg::Node const & node)
     {
         // Needed to manage the last `,`.
         std::string separator = "";
-        for(auto & unit_pair : node.units)
+        for(std::string const & name : sorted_unit_names)
         {
             std::cout << separator;
-            print_json_unit(unit_pair.second);
+            print_json_unit(node.units.at(name));
             separator = ",";
         }
     }
@@ -438,7 +448,10 @@ void print_json_node(lorg::Node const & node)
     std::cout << "}";
 }
 
-void print_json(std::vector<lorg::Node const *> const root_nodes)
+void print_json(
+    std::vector<lorg::Node const *> const root_nodes,
+    std::vector<std::string> const & sorted_unit_names
+)
 {
     // NOTE: This code should be refactored. We avoid in this software
     // recursion because it is not compatible with large data. But for the
@@ -451,17 +464,18 @@ void print_json(std::vector<lorg::Node const *> const root_nodes)
     {
         for(size_t i = 0; i < root_nodes.size() - 1; i++)
         {
-            print_json_node(*(root_nodes[i]));
+            print_json_node(*(root_nodes[i]), sorted_unit_names);
             std::cout << ",";
         }
-        print_json_node(*(root_nodes[root_nodes.size()-1]));
+        print_json_node(*(root_nodes[root_nodes.size()-1]), sorted_unit_names);
     }
     std::cout << "]";
     std::cout << std::endl;
 }
 
 void print_json_pretty_node(
-    lorg::Node const & node, std::string const & indentation, bool has_sibling
+    lorg::Node const & node, std::vector<std::string> const & sorted_unit_names,
+    std::string const & indentation, bool has_sibling
 )
 {
     std::string indentation_key = indentation + INDENTATION_STEP;
@@ -482,13 +496,15 @@ void print_json_pretty_node(
         std::cout << indentation_key << "\"children\": [" << std::endl;
         for(auto it = node.children.cbegin(); it < node.children.cend() - 1; it++)
         {
-            print_json_pretty_node(**it, indentation_value, true);
+            print_json_pretty_node(**it, sorted_unit_names, indentation_value, true);
         }
-        print_json_pretty_node(**(node.children.cend()-1), indentation_value, false);
+        print_json_pretty_node(
+            **(node.children.cend()-1), sorted_unit_names, indentation_value, false
+        );
         std::cout << indentation_key << "]," << std::endl;
     }
 
-    // Print units.
+    // Print the units.
     if(node.units.empty())
     {
         std::cout << indentation_key << "\"units\": {}" << std::endl;
@@ -498,10 +514,9 @@ void print_json_pretty_node(
         std::cout << indentation_key << "\"units\": {" << std::endl;
         // Needed to manage the last `},`.
         bool is_first = true;
-        for(auto & unit_pair : node.units)
+        for(auto const & name : sorted_unit_names)
         {
-            lorg::Unit const & unit = unit_pair.second;
-            // NOTE: Print the unit value in alphabetical order?
+            lorg::Unit const & unit = node.units.at(name);
             // NOTE: Instead of escaping that everytime, maybe we should map the unit
             // names with escaped unit names.
             std::string escaped_unit_name = escape_json(unit.name);
@@ -541,7 +556,10 @@ void print_json_pretty_node(
     }
 }
 
-void print_json_pretty(std::vector<lorg::Node const *> const root_nodes)
+void print_json_pretty(
+    std::vector<lorg::Node const *> const root_nodes,
+    std::vector<std::string> const & sorted_unit_names
+)
 {
     // NOTE: This code should be refactored. We should avoid recursion.
 
@@ -550,9 +568,11 @@ void print_json_pretty(std::vector<lorg::Node const *> const root_nodes)
     {
         for(auto it = root_nodes.cbegin(); it < root_nodes.cend() - 1; it++)
         {
-            print_json_pretty_node(**it, INDENTATION_STEP, true);
+            print_json_pretty_node(**it, sorted_unit_names, INDENTATION_STEP, true);
         }
-        print_json_pretty_node(**(root_nodes.cend()-1), INDENTATION_STEP, false);
+        print_json_pretty_node(
+            **(root_nodes.cend()-1), sorted_unit_names, INDENTATION_STEP, false
+        );
     }
     std::cout << "]" << std::endl;
 }
@@ -599,26 +619,33 @@ int main(int argc, char* argv[])
             root_nodes.push_back(child.get());
         }
     }
+    std::vector<std::string> sorted_unit_names;
+    for(auto unit_pair : result.total_node->units)
+    {
+        sorted_unit_names.push_back(unit_pair.first);
+    }
+    std::sort(sorted_unit_names.begin(), sorted_unit_names.end());
+
     if(config.to_json)
     {
         if(config.prettify)
         {
-            print_json_pretty(root_nodes);
+            print_json_pretty(root_nodes, sorted_unit_names);
         }
         else
         {
-            print_json(root_nodes);
+            print_json(root_nodes, sorted_unit_names);
         }
     }
     else
     {
         if(config.prettify)
         {
-            print_pretty(root_nodes, config);
+            print_pretty(root_nodes, sorted_unit_names, config);
         }
         else
         {
-            print_simple(root_nodes, config);
+            print_simple(root_nodes, sorted_unit_names, config);
         }
     }
 
