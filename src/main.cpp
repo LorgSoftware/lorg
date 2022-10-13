@@ -332,10 +332,15 @@ int main(int argc, char* argv[])
         exit(0);
     }
 
-    std::string content = get_file_content_or_exit(arguments.filepath);
-
     // Parse the content.
-    lorg::ParserResult result = lorg::parse(content);
+    lorg::ParserResult result;
+    {
+        // NOTE: We put the content variable into this scope because we get the
+        // full content of the file. The file may be very big, and we do not
+        // need the content anymore after parsing it.
+        std::string content = get_file_content_or_exit(arguments.filepath);
+        result = lorg::parse(content);
+    }
     if(result.has_error)
     {
         std::cerr << result.error_message << std::endl;
