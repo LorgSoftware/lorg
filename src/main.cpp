@@ -9,6 +9,9 @@
 
 #define VERSION "1.0"
 
+// Indentation step for printing prettily JSON.
+#define INDENTATION_STEP "    "
+
 constexpr int EXIT_CODE_OK = 0;
 constexpr int EXIT_CODE_ERROR_ARGUMENTS = 1;
 constexpr int EXIT_CODE_ERROR_PARSE = 2;
@@ -457,6 +460,103 @@ void print_json(std::vector<lorg::Node const *> const root_nodes)
     std::cout << std::endl;
 }
 
+void print_json_pretty_node(
+    lorg::Node const & node, std::string const & indentation, bool has_sibling
+)
+{
+    std::string indentation_key = indentation + INDENTATION_STEP;
+    std::string indentation_value = indentation + INDENTATION_STEP + INDENTATION_STEP;
+
+    std::cout << indentation << "{" << std::endl;
+
+    // Print title.
+    std::cout << indentation_key << "\"title\": \"" << escape_json(node.title) << "\"," << std::endl;
+
+    // Print children.
+    if(node.children.empty())
+    {
+        std::cout << indentation_key << "\"children\": []," << std::endl;
+    }
+    else
+    {
+        std::cout << indentation_key << "\"children\": [" << std::endl;
+        for(auto it = node.children.cbegin(); it < node.children.cend() - 1; it++)
+        {
+            print_json_pretty_node(**it, indentation_value, true);
+        }
+        print_json_pretty_node(**(node.children.cend()-1), indentation_value, false);
+        std::cout << indentation_key << "]," << std::endl;
+    }
+
+    // Print units.
+    if(node.units.empty())
+    {
+        std::cout << indentation_key << "\"units\": {}" << std::endl;
+    }
+    else
+    {
+        std::cout << indentation_key << "\"units\": {" << std::endl;
+        // Needed to manage the last `},`.
+        bool is_first = true;
+        for(auto & unit_pair : node.units)
+        {
+            lorg::Unit const & unit = unit_pair.second;
+            // NOTE: Print the unit value in alphabetical order?
+            // NOTE: Instead of escaping that everytime, maybe we should map the unit
+            // names with escaped unit names.
+            std::string escaped_unit_name = escape_json(unit.name);
+
+            std::string const & i = indentation_value;
+            std::string const & iv = i + INDENTATION_STEP;
+
+            if(is_first)
+            {
+                is_first = false;
+            }
+            else
+            {
+                std::cout << i << "}," << std::endl;
+            }
+
+            std::cout << i << "\"" << escaped_unit_name << "\": {" << std::endl;
+            std::cout << iv << "\"name\": \"" << escaped_unit_name << "\"," << std::endl;
+            std::cout << iv << "\"value\": " << unit.value << "," << std::endl;
+            std::cout << iv << "\"isReal\": " << to_string(unit.is_real) << "," << std::endl;
+            std::cout << iv << "\"isIgnored\": " << to_string(unit.is_ignored) << std::endl;
+        }
+        if(!node.units.empty())
+        {
+            std::cout << indentation_value << "}" << std::endl;
+        }
+        std::cout << indentation_key << "}" << std::endl;
+    }
+
+    if(has_sibling)
+    {
+        std::cout << indentation << "}," << std::endl;
+    }
+    else
+    {
+        std::cout << indentation << "}" << std::endl;
+    }
+}
+
+void print_json_pretty(std::vector<lorg::Node const *> const root_nodes)
+{
+    // NOTE: This code should be refactored. We should avoid recursion.
+
+    std::cout << "[" << std::endl;
+    if(root_nodes.size() > 0)
+    {
+        for(auto it = root_nodes.cbegin(); it < root_nodes.cend() - 1; it++)
+        {
+            print_json_pretty_node(**it, INDENTATION_STEP, true);
+        }
+        print_json_pretty_node(**(root_nodes.cend()-1), INDENTATION_STEP, false);
+    }
+    std::cout << "]" << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     CommandArguments arguments = parse_command_arguments_or_exit(argc, argv);
@@ -501,7 +601,14 @@ int main(int argc, char* argv[])
     }
     if(config.to_json)
     {
-        print_json(root_nodes);
+        if(config.prettify)
+        {
+            print_json_pretty(root_nodes);
+        }
+        else
+        {
+            print_json(root_nodes);
+        }
     }
     else
     {
