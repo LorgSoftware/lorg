@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stack>
 #include <string>
 
@@ -20,6 +21,7 @@ struct Config
     bool display_total_node = true;
     bool add_indent = true;
     bool prettify = false;
+    bool to_json = false;
     std::string total_name = "TOTAL";
 };
 
@@ -55,6 +57,61 @@ struct PrintContainer
 bool are_equal(char const * const str1, std::string && str2)
 {
     return str2.compare(str1) == 0;
+}
+
+std::string escape_json(std::string const & str)
+{
+    std::string escaped;
+    for(char const & c : str)
+    {
+        if(c == '"')
+        {
+            escaped.append("\\\"");
+        }
+        else if(c == '\\')
+        {
+            escaped.append("\\\\");
+        }
+        else if(c == '\b')
+        {
+            escaped.append("\\b");
+        }
+        else if(c == '\f')
+        {
+            escaped.append("\\f");
+        }
+        else if(c == '\n')
+        {
+            escaped.append("\\n");
+        }
+        else if(c == '\r')
+        {
+            escaped.append("\\r");
+        }
+        else if(c == '\t')
+        {
+            escaped.append("\\t");
+        }
+        else if('\x00' <= c && c <= '\x1f')
+        {
+            escaped.append("\\u00");
+            if('\x00' <= c && c < '\x10')
+            {
+                escaped.push_back('0');
+            }
+            std::ostringstream os;
+            os << std::hex << static_cast<int>(c);
+            for(char const & oc : os.str())
+            {
+                escaped.push_back(oc);
+            }
+        }
+        else
+        {
+            escaped.push_back(c);
+        }
+    }
+    return escaped;
 }
 
 CommandArguments parse_command_arguments_or_exit(int argc, char const * const argv[])
@@ -95,6 +152,10 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         else if(are_equal(argv[i], "--prettify") || are_equal(argv[i], "-p"))
         {
             config.prettify = true;
+        }
+        else if(are_equal(argv[i], "--to-json") || are_equal(argv[i], "-tj"))
+        {
+            config.to_json = true;
         }
         else if(are_equal(argv[i], "--total-name") || are_equal(argv[i], "-tn"))
         {
@@ -319,6 +380,83 @@ void print_pretty(std::vector<lorg::Node const *> const root_nodes, Config const
     }
 }
 
+inline std::string to_string(bool const v)
+{
+    return v ? "true" : "false";
+}
+
+void print_json_unit(lorg::Unit const & unit)
+{
+    // NOTE: Print the unit value in alphabetical order?
+    // NOTE: Instead of escaping that everytime, maybe we should map the unit
+    // names with escaped unit names.
+    std::string escaped_unit_name = escape_json(unit.name);
+    std::cout << "\"" << escaped_unit_name << "\":{";
+    std::cout << "\"name\":\"" << escaped_unit_name << "\",";
+    std::cout << "\"value\":" << unit.value << ",";
+    std::cout << "\"isReal\":" << to_string(unit.is_real) << ",";
+    std::cout << "\"isIgnored\":" << to_string(unit.is_ignored);
+    std::cout << "}";
+}
+
+void print_json_node(lorg::Node const & node)
+{
+    std::cout << "{";
+    // Print title.
+    std::cout << "\"title\":\"" << escape_json(node.title) << "\"";
+
+    // Print children.
+    std::cout << ",\"children\":[";
+    if(node.children.size() > 0)
+    {
+        for(size_t i = 0; i < node.children.size() - 1; i++)
+        {
+            print_json_node(*(node.children[i]));
+            std::cout << ",";
+        }
+        print_json_node(*(node.children[node.children.size()-1]));
+    }
+    std::cout << "]";
+
+    // Print the units.
+    std::cout << ",\"units\":{";
+    {
+        // Needed to manage the last `,`.
+        std::string separator = "";
+        for(auto & unit_pair : node.units)
+        {
+            std::cout << separator;
+            print_json_unit(unit_pair.second);
+            separator = ",";
+        }
+    }
+    std::cout << "}";
+
+    std::cout << "}";
+}
+
+void print_json(std::vector<lorg::Node const *> const root_nodes)
+{
+    // NOTE: This code should be refactored. We avoid in this software
+    // recursion because it is not compatible with large data. But for the
+    // moment, I do not know how to write this code using stacks (for example).
+    // The fact that a node should print something before *and* after its
+    // children is the problem.
+
+    std::cout << "[";
+    if(root_nodes.size() > 0)
+    {
+        for(size_t i = 0; i < root_nodes.size() - 1; i++)
+        {
+            print_json_node(*(root_nodes[i]));
+            std::cout << ",";
+        }
+        print_json_node(*(root_nodes[root_nodes.size()-1]));
+    }
+    std::cout << "]";
+    std::cout << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     CommandArguments arguments = parse_command_arguments_or_exit(argc, argv);
@@ -361,13 +499,20 @@ int main(int argc, char* argv[])
             root_nodes.push_back(child.get());
         }
     }
-    if(config.prettify)
+    if(config.to_json)
     {
-        print_pretty(root_nodes, config);
+        print_json(root_nodes);
     }
     else
     {
-        print_simple(root_nodes, config);
+        if(config.prettify)
+        {
+            print_pretty(root_nodes, config);
+        }
+        else
+        {
+            print_simple(root_nodes, config);
+        }
     }
 
     return EXIT_CODE_OK;
