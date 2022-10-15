@@ -20,13 +20,9 @@ constexpr int EXIT_CODE_ERROR_PARSE = 2;
 struct Config
 {
     bool print_version = false;
-    bool hide_ignored = false;
-    bool hide_ignored_and_calculated = false;
     bool display_total_node = true;
-    bool add_indent = true;
     bool prettify = false;
     bool to_json = false;
-    std::string total_name = "TOTAL";
 };
 
 struct CommandArguments
@@ -137,21 +133,9 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         {
             config.print_version = true;
         }
-        else if(are_equal(argv[i], "--no-ignored") || are_equal(argv[i], "-nig"))
-        {
-            config.hide_ignored = true;
-        }
-        else if(are_equal(argv[i], "--no-ignored-and-calculated") || are_equal(argv[i], "-nic"))
-        {
-            config.hide_ignored_and_calculated = true;
-        }
         else if(are_equal(argv[i], "--no-total") || are_equal(argv[i], "-nt"))
         {
             config.display_total_node = false;
-        }
-        else if(are_equal(argv[i], "--no-indent") || are_equal(argv[i], "-nin"))
-        {
-            config.add_indent = false;
         }
         else if(are_equal(argv[i], "--prettify") || are_equal(argv[i], "-p"))
         {
@@ -160,19 +144,6 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         else if(are_equal(argv[i], "--to-json") || are_equal(argv[i], "-tj"))
         {
             config.to_json = true;
-        }
-        else if(are_equal(argv[i], "--total-name") || are_equal(argv[i], "-tn"))
-        {
-            i++;
-            if(i < argc)
-            {
-                arguments.config.total_name = argv[i];
-            }
-            else
-            {
-                std::cerr << "The option " << argv[i-1] << " requires an argument." << std::endl;
-                exit(EXIT_CODE_ERROR_ARGUMENTS);
-            }
         }
         else
         {
@@ -227,14 +198,6 @@ std::string get_file_content_or_exit(std::string const filepath)
     return content;
 }
 
-inline bool should_hide_unit(lorg::Unit const & unit, Config const & config)
-{
-    return (
-        (unit.is_ignored && config.hide_ignored) ||
-        ((unit.is_ignored && !unit.is_real) && config.hide_ignored_and_calculated)
-    );
-}
-
 // We do not want to override the "<<" operator just for that. It makes
 // semantically no sense.
 void cout_unit(std::ostream & o, lorg::Unit const & unit)
@@ -252,8 +215,7 @@ void cout_unit(std::ostream & o, lorg::Unit const & unit)
 
 void print_simple(
     std::vector<lorg::Node const *> const root_nodes,
-    std::vector<std::string> const & sorted_unit_names,
-    Config const & config
+    std::vector<std::string> const & sorted_unit_names
 )
 {
     std::stack<PrintContainer> nodes_to_print;
@@ -271,12 +233,9 @@ void print_simple(
         std::string indentation;
         // NOTE: could we use a dynamic string or a map of levels instead
         // of looping?
-        if(config.add_indent)
+        for(int i = 0; i < level - 1; i++)
         {
-            for(int i = 0; i < level - 1; i++)
-            {
-                indentation += "  ";
-            }
+            indentation += "  ";
         }
 
         // Print the title.
@@ -291,14 +250,7 @@ void print_simple(
         for(auto const & name : sorted_unit_names)
         {
             lorg::Unit const & unit = node.units.at(name);
-            if(should_hide_unit(unit, config))
-            {
-                continue;
-            }
-            if(config.add_indent)
-            {
-                std::cout << indentation << "  ";
-            }
+            std::cout << indentation << "  ";
             cout_unit(std::cout, unit);
             std::cout << std::endl;
         }
@@ -314,8 +266,7 @@ void print_simple(
 
 void print_pretty(
     std::vector<lorg::Node const *> const root_nodes,
-    std::vector<std::string> const & sorted_unit_names,
-    Config const & config
+    std::vector<std::string> const & sorted_unit_names
 )
 {
     std::stack<PrintContainer> nodes_to_print;
@@ -361,10 +312,6 @@ void print_pretty(
         for(auto const & name : sorted_unit_names)
         {
             lorg::Unit const & unit = node.units.at(name);
-            if(should_hide_unit(unit, config))
-            {
-                continue;
-            }
             if(node.children.empty())
             {
                 std::cout << prefix_for_next_lines << "  ";
@@ -604,7 +551,7 @@ int main(int argc, char* argv[])
         std::cerr << result.error_message << std::endl;
         exit(EXIT_CODE_ERROR_PARSE);
     }
-    result.total_node->title = config.total_name;
+    result.total_node->title = "TOTAL";
 
     // Print the result.
     std::vector<lorg::Node const *> root_nodes;
@@ -641,11 +588,11 @@ int main(int argc, char* argv[])
     {
         if(config.prettify)
         {
-            print_pretty(root_nodes, sorted_unit_names, config);
+            print_pretty(root_nodes, sorted_unit_names);
         }
         else
         {
-            print_simple(root_nodes, sorted_unit_names, config);
+            print_simple(root_nodes, sorted_unit_names);
         }
     }
 
