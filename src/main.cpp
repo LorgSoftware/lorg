@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -129,7 +130,37 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
     int i = 1;
     while(i < argc)
     {
-        if(are_equal(argv[i], "--version") || are_equal(argv[i], "-v"))
+        if(std::strlen(argv[i]) > 1 && argv[i][0] == '-' && argv[i][1] != '-')
+        {
+            size_t length = std::strlen(argv[i]);
+            for(size_t n = 1; n < length; n++)
+            {
+                char const & c = argv[i][n];
+                if(c =='v')
+                {
+                    config.print_version = true;
+                }
+                else if(c =='t')
+                {
+                    config.display_total_node = true;
+                }
+                else if(c =='p')
+                {
+                    config.prettify = true;
+                }
+                else if(c =='j')
+                {
+                    config.to_json = true;
+                }
+                else
+                {
+                    std::cerr << "Unknown option \"-" << c << "\"." << std::endl;
+                    exit(EXIT_CODE_ERROR_ARGUMENTS);
+                }
+
+            }
+        }
+        else if(are_equal(argv[i], "--version") || are_equal(argv[i], "-v"))
         {
             config.print_version = true;
         }
