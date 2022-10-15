@@ -184,8 +184,16 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
             }
             else
             {
-                std::cerr << "Only one file at a time can be parsed." << std::endl;
-                exit(EXIT_CODE_ERROR_ARGUMENTS);
+                if(argv[i][0] == '-')
+                {
+                    std::cerr << "Unknown option \"" << argv[i] << "\"." << std::endl;
+                    exit(EXIT_CODE_ERROR_ARGUMENTS);
+                }
+                else
+                {
+                    std::cerr << "Only one file at a time can be parsed." << std::endl;
+                    exit(EXIT_CODE_ERROR_ARGUMENTS);
+                }
             }
         }
         i++;
