@@ -141,7 +141,7 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         {
             config.prettify = true;
         }
-        else if(are_equal(argv[i], "--to-json") || are_equal(argv[i], "-tj"))
+        else if(are_equal(argv[i], "--json") || are_equal(argv[i], "-j"))
         {
             config.to_json = true;
         }
