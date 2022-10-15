@@ -8,9 +8,13 @@
 
 using namespace lorg;
 
+bool is_char_in_vector(char const & c, std::vector<char> const & v);
+
 /*
  * Stream to a given string, and keeps the column and the line position
  * synchronized with the current character the stream is currently pointing to.
+ *
+ * NOTE: Some characters are completely ignored by Lorg so we skip them here.
  */
 struct StringStream
 {
@@ -20,17 +24,47 @@ struct StringStream
     // The column of the last character returned by "get()".
     int column;
 
+    // The line of the character returned by `peek()`.
+    int peek_line;
+
+    // The column of the character returned by `peek()`.
+    int peek_column;
+
     // The current look up character index in the string.
     size_t index;
 
     std::string const & s;
 
     StringStream(std::string const & string_reference):
-        line(1),
+        line(0),
         column(0),
+        peek_line(1),
+        peek_column(1),
         index(0),
         s(string_reference)
     {
+        if(s.empty())
+        {
+            peek_line = 0;
+            peek_column = 0;
+            return;
+        }
+        while(
+            index < s.size() &&
+            is_char_in_vector(s[index], IGNORED_CHARACTERS)
+        )
+        {
+            index++;
+            peek_column++;
+        }
+        if(!eof())
+        {
+            if(s[index] == '\n')
+            {
+                peek_line++;
+                peek_column = 0;
+            }
+        }
     }
 
     bool eof() noexcept
@@ -45,16 +79,29 @@ struct StringStream
             return '\0';
         }
         char c = s[index];
-        if(c == '\n')
-        {
-            line++;
-            column = 0;
-        }
-        else
-        {
-            column++;
-        }
+        line = peek_line;
+        column = peek_column;
+
         index++;
+        peek_column++;
+
+        while(
+            index < s.size() &&
+            is_char_in_vector(s[index], IGNORED_CHARACTERS)
+        )
+        {
+            index++;
+            peek_column++;
+        }
+
+        if(!eof())
+        {
+            if(s[index] == '\n')
+            {
+                peek_line++;
+                peek_column = 0;
+            }
+        }
         return c;
     }
 
@@ -76,6 +123,18 @@ struct ConvertStringToNodesResult
     ParserResult parser_result;
     std::set<std::string> existing_units;
 };
+
+bool is_char_in_vector(char const & c, std::vector<char> const & v)
+{
+    for(char const & v_c : v)
+    {
+        if(c == v_c)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 inline bool is_whitespace(char const & c)
 {
