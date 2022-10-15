@@ -20,7 +20,7 @@ constexpr int EXIT_CODE_ERROR_PARSE = 2;
 struct Config
 {
     bool print_version = false;
-    bool display_total_node = true;
+    bool display_total_node = false;
     bool prettify = false;
     bool to_json = false;
 };
@@ -133,9 +133,9 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
         {
             config.print_version = true;
         }
-        else if(are_equal(argv[i], "--no-total") || are_equal(argv[i], "-nt"))
+        else if(are_equal(argv[i], "--total") || are_equal(argv[i], "-t"))
         {
-            config.display_total_node = false;
+            config.display_total_node = true;
         }
         else if(are_equal(argv[i], "--prettify") || are_equal(argv[i], "-p"))
         {
