@@ -2,8 +2,102 @@
 .SH NAME
 lorg \- Hierarchical data manager
 .SH SYNOPSIS
+.B lorg \-v
+.P
 .B lorg
-.RB [ \-v ]
+[\fB\-jpt\fR]
+.I FILE
 .SH DESCRIPTION
 .B lorg
 manages hierarchical data.
+Data are represented as a tree of nodes.
+The syntax to structure the data is similar to Markdown.
+.P
+Each data node has a title.
+It can have zero or multiple units.
+It also can have zero to multiple nodes.
+.P
+A node is defined by its name and its value.
+A value can be an integer or a float.
+.P
+When \fBlorg\fR parses a Lorg file, for each unit not present in a node, it sums the unit value of the children of this node.
+Then \fBlorg\fR displays the result.
+.P
+See the \fBEXAMPLE\fB section to learn about the syntax.
+.SH OPTIONS
+.TP
+.B \-j, \-\-json
+exports the result to JSON.
+.TP
+.B \-p, \-\-prettify
+prettifies the result display.
+.TP
+.B \-t, \-\-total
+displays a root node with the total.
+.TP
+.B \-v, \-\-version
+prints the version.
+.SH EXIT VALUES
+.TP
+.B 0
+Successful program execution.
+.TP
+.B 1
+Wrong command line arguments.
+.TP
+.B 2
+Incorrect Lorg file.
+.SH EXAMPLES
+Let say that you have a house and you need to repair it.
+You know for each room the time and the cost for those reparation.
+Using \fBlorg\fR you can automatically find how long it will take and the total cost.
+.P
+Here is an example of a Lorg file with the data you know:
+.P
+.in +4n
+.EX
+# House
+## First floor
+### Living room
+$ Days: 2
+$ Cost: 500
+## Second floor
+### Bathroom
+$ Cost: 1500
+.EE
+.in
+.P
+As you can see in the example, you can define a node by starting a line with one or multiple \fB#\fR then writting its \fItitle\fR.
+The number of \fB#\fR determines its level.
+It works exactly as in Markdown syntax.
+Note: you can put as much space as you want before the first \fB#\fR and after the last one.
+.P
+Each node can have multiple units.
+A unit definition line starts by a \fB$\fR followed by its \fIname\fR then \fB:\fR then its \fIvalue\fR.
+The value can be an integer or a float.
+If you do not know a unit value for a node, just do not define it and let \fBlorg\fR handle it.
+Note: you can put as much spaces as you want around the \fIname\fR and the \fIvalue\fR.
+.P
+Using \fBlorg\fR, we have the total result:
+.P
+.in +4n
+.EX
+# House
+  $ Cost: 2000 [Calculated]
+  $ Days: 2 [Calculated]
+  ## First floor
+    $ Cost: 500 [Calculated]
+    $ Days: 2 [Calculated]
+    ### Living room
+      $ Cost: 500
+      $ Days: 2
+  ## Second floor
+    $ Cost: 1500 [Calculated]
+    $ Days: 0 [Calculated]
+    ### Bathroom
+      $ Cost: 1500
+      $ Days: 0 [Calculated]
+.EE
+.in
+.SH AUTHORS
+Copyright (C) Alex Canales (Nales)
