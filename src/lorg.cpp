@@ -517,7 +517,7 @@ ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
             if(nodes_to_add.empty())
             {
                 return create_ConvertStringToNodesResult_error(
-                    get_error_message_unit_definition_ill_formed(current_line)
+                    get_error_message_unit_outside_node(current_line)
                 );
             }
 
