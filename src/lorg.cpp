@@ -262,7 +262,7 @@ std::string get_error_message_unit_definition_ill_formed(int line)
     std::string error_message = format_error(
         "The unit definition is ill-formed.", line
     );
-    error_message += "\nThe unit defintion should follow this format:";
+    error_message += "\nThe unit definition should follow this format:";
     error_message += "\n    $ UNIT_NAME : UNIT_VALUE";
     return error_message;
 }
