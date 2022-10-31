@@ -232,66 +232,6 @@ bool is_unit_value_ok(std::string const & value)
     return true;
 }
 
-std::string format_error(std::string const message, int line, int column = 0)
-{
-    std::string error_message = "Line " + std::to_string(line);
-    if(column != 0)
-    {
-        error_message += ", column " + std::to_string(column);
-    }
-    error_message += ": " + message;
-    return error_message;
-}
-
-std::string get_error_message_node_without_title(int line)
-{
-    return format_error(
-        "The node has no title.", line
-    );
-}
-
-std::string get_error_message_node_without_direct_parent(int line)
-{
-    return format_error(
-        "The node is not a direct descendant to any other node.", line
-    );
-}
-
-std::string get_error_message_unit_definition_ill_formed(int line)
-{
-    std::string error_message = format_error(
-        "The unit definition is ill-formed.", line
-    );
-    error_message += "\nThe unit definition should follow this format:";
-    error_message += "\n    $ UNIT_NAME : UNIT_VALUE";
-    return error_message;
-}
-
-std::string get_error_message_unit_value_incorrect(int line)
-{
-    return format_error(
-        "The unit value is incorrect.", line
-    );
-}
-
-std::string get_error_message_unit_outside_node(int line)
-{
-    return format_error(
-        "The unit definition is outsite of a node.", line
-    );
-}
-
-ConvertStringToNodesResult create_ConvertStringToNodesResult_error(
-    std::string error_message
-)
-{
-    ConvertStringToNodesResult result;
-    result.parser_result.has_error = true;
-    result.parser_result.error_message = error_message;
-    return result;
-}
-
-
 // `first_char` is needed because we often detect the need of getting the rest
 // of the line after checking the first character.
 // After this function ran, `stream.get()` returns the first character after
@@ -353,6 +293,65 @@ std::string get_substring_without_leading_trailing_spaces(
         substring.push_back(str[i]);
     }
     return substring;
+}
+
+std::string format_error(std::string const message, int line, int column = 0)
+{
+    std::string error_message = "Line " + std::to_string(line);
+    if(column != 0)
+    {
+        error_message += ", column " + std::to_string(column);
+    }
+    error_message += ": " + message;
+    return error_message;
+}
+
+std::string get_error_message_node_without_title(int line)
+{
+    return format_error(
+        "The node has no title.", line
+    );
+}
+
+std::string get_error_message_node_without_direct_parent(int line)
+{
+    return format_error(
+        "The node is not a direct descendant to any other node.", line
+    );
+}
+
+std::string get_error_message_unit_definition_ill_formed(int line)
+{
+    std::string error_message = format_error(
+        "The unit definition is ill-formed.", line
+    );
+    error_message += "\nThe unit definition should follow this format:";
+    error_message += "\n    $ UNIT_NAME : UNIT_VALUE";
+    return error_message;
+}
+
+std::string get_error_message_unit_value_incorrect(int line)
+{
+    return format_error(
+        "The unit value is incorrect.", line
+    );
+}
+
+std::string get_error_message_unit_outside_node(int line)
+{
+    return format_error(
+        "The unit definition is outsite of a node.", line
+    );
+}
+
+ConvertStringToNodesResult create_ConvertStringToNodesResult_error(
+    std::string error_message
+)
+{
+    ConvertStringToNodesResult result;
+    result.parser_result.has_error = true;
+    result.parser_result.error_message = error_message;
+    return result;
 }
 
 ConvertStringToNodesResult convert_string_to_nodes(std::string const & content)
