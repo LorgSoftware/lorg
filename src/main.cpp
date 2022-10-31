@@ -73,14 +73,6 @@ std::string escape_json(std::string const & str)
         {
             escaped.append("\\\\");
         }
-        else if(c == '\b')
-        {
-            escaped.append("\\b");
-        }
-        else if(c == '\f')
-        {
-            escaped.append("\\f");
-        }
         else if(c == '\n')
         {
             escaped.append("\\n");
