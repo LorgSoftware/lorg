@@ -404,19 +404,6 @@ void print_json_node(
     // Print title.
     std::cout << "\"title\":\"" << escape_json(node.title) << "\"";
 
-    // Print children.
-    std::cout << ",\"children\":[";
-    if(node.children.size() > 0)
-    {
-        for(size_t i = 0; i < node.children.size() - 1; i++)
-        {
-            print_json_node(*(node.children[i]), sorted_unit_names);
-            std::cout << ",";
-        }
-        print_json_node(*(node.children[node.children.size()-1]), sorted_unit_names);
-    }
-    std::cout << "]";
-
     // Print the units.
     std::cout << ",\"units\":{";
     {
@@ -430,6 +417,19 @@ void print_json_node(
         }
     }
     std::cout << "}";
+
+    // Print children.
+    std::cout << ",\"children\":[";
+    if(node.children.size() > 0)
+    {
+        for(size_t i = 0; i < node.children.size() - 1; i++)
+        {
+            print_json_node(*(node.children[i]), sorted_unit_names);
+            std::cout << ",";
+        }
+        print_json_node(*(node.children[node.children.size()-1]), sorted_unit_names);
+    }
+    std::cout << "]";
 
     std::cout << "}";
 }
@@ -472,28 +472,10 @@ void print_json_pretty_node(
     // Print title.
     std::cout << indentation_key << "\"title\": \"" << escape_json(node.title) << "\"," << std::endl;
 
-    // Print children.
-    if(node.children.empty())
-    {
-        std::cout << indentation_key << "\"children\": []," << std::endl;
-    }
-    else
-    {
-        std::cout << indentation_key << "\"children\": [" << std::endl;
-        for(auto it = node.children.cbegin(); it < node.children.cend() - 1; it++)
-        {
-            print_json_pretty_node(**it, sorted_unit_names, indentation_value, true);
-        }
-        print_json_pretty_node(
-            **(node.children.cend()-1), sorted_unit_names, indentation_value, false
-        );
-        std::cout << indentation_key << "]," << std::endl;
-    }
-
     // Print the units.
     if(node.units.empty())
     {
-        std::cout << indentation_key << "\"units\": {}" << std::endl;
+        std::cout << indentation_key << "\"units\": {}," << std::endl;
     }
     else
     {
@@ -516,6 +498,7 @@ void print_json_pretty_node(
             }
             else
             {
+                // Closing the last sibling unit JSON print.
                 std::cout << i << "}," << std::endl;
             }
 
@@ -527,9 +510,28 @@ void print_json_pretty_node(
         }
         if(!node.units.empty())
         {
+            // Closing the last sibling unit JSON print.
             std::cout << indentation_value << "}" << std::endl;
         }
-        std::cout << indentation_key << "}" << std::endl;
+        std::cout << indentation_key << "}," << std::endl;
+    }
+
+    // Print children.
+    if(node.children.empty())
+    {
+        std::cout << indentation_key << "\"children\": []" << std::endl;
+    }
+    else
+    {
+        std::cout << indentation_key << "\"children\": [" << std::endl;
+        for(auto it = node.children.cbegin(); it < node.children.cend() - 1; it++)
+        {
+            print_json_pretty_node(**it, sorted_unit_names, indentation_value, true);
+        }
+        print_json_pretty_node(
+            **(node.children.cend()-1), sorted_unit_names, indentation_value, false
+        );
+        std::cout << indentation_key << "]" << std::endl;
     }
 
     if(has_sibling)
