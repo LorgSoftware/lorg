@@ -173,11 +173,17 @@ to build the `lorg` executable.
 make
 ```
 
-### Install
+### Install and uninstall
 
 You can modify `config.mk` if you want to customize the installation process.
 To install Lorg, use this command:
 
 ```
 sudo make install
+```
+
+If you want to uninstall:
+
+```
+sudo make uninstall
 ```
