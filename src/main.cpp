@@ -7,6 +7,17 @@
 #include <stack>
 #include <string>
 
+#if defined(__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#define IS_POSIX 1
+#else
+#define IS_POSIX 0
+#endif
+
+#if IS_POSIX
+// Needed to test if the software was called after a pipe.
+#include <unistd.h>
+#endif
+
 #include "lorg.hpp"
 
 #define VERSION "1.0"
@@ -53,6 +64,31 @@ struct PrintContainer
     {
     }
 };
+
+// Returns the content from stdin if the software was called in after a pipe.
+//   Example: `cat file.lorg | lorg` or `lorg <(cat file.lorg)`
+// Returns an empty string if the software was not called after a pipe.
+std::string get_stdin_content_from_pipe()
+{
+#if IS_POSIX
+    bool is_from_pipe = !isatty(fileno(stdin));
+    if(is_from_pipe)
+    {
+        std::string content;
+        for(std::string line; std::getline(std::cin, line);)
+        {
+            content += line + "\n";
+        }
+        return content;
+    }
+    else
+    {
+        return "";
+    }
+#else
+    return "";
+#endif
+}
 
 // Useful for comparing "argv[i]" with a litteral string.
 bool are_equal(char const * const str1, std::string && str2)
@@ -109,13 +145,6 @@ std::string escape_json(std::string const & str)
 
 CommandArguments parse_command_arguments_or_exit(int argc, char const * const argv[])
 {
-    // Check the argument count.
-    if(argc < 2)
-    {
-        std::cerr << "Need a file as an argument" << std::endl;
-        exit(EXIT_CODE_ERROR_ARGUMENTS);
-    }
-
     CommandArguments arguments;
     Config & config = arguments.config;
 
@@ -576,7 +605,20 @@ int main(int argc, char* argv[])
         // NOTE: We put the content variable into this scope because we get the
         // full content of the file. The file may be very big, and we do not
         // need the content anymore after parsing it.
-        std::string content = get_file_content_or_exit(arguments.filepath);
+        std::string content;
+        if(arguments.filepath.empty())
+        {
+            content = get_stdin_content_from_pipe();
+            if(content.empty())
+            {
+                std::cerr << "Need a file as an argument." << std::endl;
+                exit(EXIT_CODE_ERROR_ARGUMENTS);
+            }
+        }
+        else
+        {
+            content = get_file_content_or_exit(arguments.filepath);
+        }
         result = lorg::parse(content);
     }
     if(result.has_error)
