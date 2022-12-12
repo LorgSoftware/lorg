@@ -4,9 +4,11 @@ lorg \- Hierarchical data manager
 .SH SYNOPSIS
 .B lorg \-v
 .P
+.B lorg \-h
+.P
 .B lorg
 [\fB\-jpt\fR]
-.I FILE
+[\fIFILE\fR]
 .SH DESCRIPTION
 .B lorg
 manages hierarchical data.
@@ -23,7 +25,9 @@ A value can be an integer or a float.
 When \fBlorg\fR parses a Lorg file, for each unit not present in a node, it sums the unit value of the children of this node.
 Then \fBlorg\fR displays the result.
 .P
-See the \fBEXAMPLE\fB section to learn about the syntax.
+When no \fIFILE\fR, \fBlorg\fR reads the standard input.
+.P
+See the \fBEXAMPLE\fR section to learn more about the syntax.
 .SH OPTIONS
 .TP
 .B \-j, \-\-json
