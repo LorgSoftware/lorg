@@ -31,6 +31,7 @@ constexpr int EXIT_CODE_ERROR_PARSE = 2;
 
 struct Config
 {
+    bool print_help = false;
     bool print_version = false;
     bool display_total_node = false;
     bool prettify = false;
@@ -157,7 +158,11 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
             for(size_t n = 1; n < length; n++)
             {
                 char const & c = argv[i][n];
-                if(c =='v')
+                if(c =='h')
+                {
+                    config.print_help = true;
+                }
+                else if(c =='v')
                 {
                     config.print_version = true;
                 }
@@ -180,6 +185,10 @@ CommandArguments parse_command_arguments_or_exit(int argc, char const * const ar
                 }
 
             }
+        }
+        else if(are_equal(argv[i], "--help") || are_equal(argv[i], "-h"))
+        {
+            config.print_help = true;
         }
         else if(are_equal(argv[i], "--version") || are_equal(argv[i], "-v"))
         {
@@ -591,7 +600,32 @@ int main(int argc, char* argv[])
     CommandArguments arguments = parse_command_arguments_or_exit(argc, argv);
     Config const & config = arguments.config;
 
-    if(config.print_version)
+    if(config.print_help)
+    {
+
+        std::cout << "Usage: lorg [OPTIONS]... [FILE]" << '\n';
+        std::cout << "" << '\n';
+        std::cout << "Parse Lorg files and print the result." << '\n';
+        std::cout << "" << '\n';
+        std::cout << "When no FILE, read standard input." << '\n';
+        std::cout << "" << '\n';
+        std::cout << "Options:" << '\n';
+        std::cout << "  -h, --help      Print this help and quit." << '\n';
+        std::cout << "  -v, --version   Print the version and quit." << '\n';
+        std::cout << "  -j, --json      Print the result in JSON format." << '\n';
+        std::cout << "  -p, --prettify  Prettifies the result display." << '\n';
+        std::cout << "  -t, --total     Print a root node with the total." << '\n';
+        std::cout << "" << '\n';
+        std::cout << "Examples:" << '\n';
+        std::cout << "  lorg -jp file.lorg" << '\n';
+        std::cout << "    Print the result from file.lorg into a pretty JSON format." << '\n';
+        std::cout << "  cat file.lorg | lorg" << '\n';
+        std::cout << "    Print the result from file.lorg using the standard input." << '\n';
+        std::cout << "  lorg file.lorg | grep -vF \"[Calculated] [Ignored]\"" << '\n';
+        std::cout << "    Do not print unit values that are calculated and ignored." << '\n';
+        exit(0);
+    }
+    else if(config.print_version)
     {
         std::cout << VERSION << std::endl;
         // There is no need to do anything else. It should not be a correct
