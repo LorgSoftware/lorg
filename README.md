@@ -147,8 +147,8 @@ House
 
 ### Dependencies
 
-Lorg was written in C++17. You need `cmake`, `g++` and `make` if you want to
-use the build system included in the project.
+Lorg is written in C++17. You need `cmake`, `g++` and `make` if you want to use
+the build system included in the project.
 
 To install the dependencies on a Debian base system (Ubuntu, Linux Mint...):
 
@@ -156,7 +156,7 @@ To install the dependencies on a Debian base system (Ubuntu, Linux Mint...):
 sudo apt install cmake g++
 ```
 
-Alternatively, Lorg was developed to be easy to build, so there are no special
+Alternatively, Lorg is developed to be easy to build, so there are no special
 dependencies. If you want to build it and install it manually, just use your
 favorite C++ compiler and compile all the files. For example with `gcc`:
 
