@@ -193,6 +193,17 @@ sudo make uninstall
 This project licensed is under GNU AGPLv3 (GNU Affero General Public License
 version 3). The terms and conditions of this license are in the `LICENSE` file.
 
+Note that in the section "2. Basic Permissions.", the license gives you the
+right to copy and paste small code snippets for various purposes (share
+snippets of the code, use snippets for your own work...) without the need of
+covering your own work under GNU AGPLv3.
+
+> This License acknowledges your rights of fair use or other equivalent, as
+> provided by copyright law.
+
+In other words, if you integrate in your project some small parts of the code
+from this project, you are not forced to license your work under GNU AGPLv3.
+
 ## Copyright
 
 ```
