@@ -107,12 +107,12 @@ $ Cost: 500
 $ Cost: 1500
 ```
 
-### Comments
+#### Comments
 
 All lines that are not node definitions nor unit definitions are comments. They
 are ignored by Lorg.
 
-#### Usage
+### Usage
 
 Lorg will calculate for us the unit values for the other nodes. Note that for
 the moment it only **sums** the values.
@@ -190,7 +190,7 @@ sudo make uninstall
 
 ## License
 
-This project licensed is under GNU AGPLv3 (GNU Affero General Public License
+This project is licensed under GNU AGPLv3 (GNU Affero General Public License
 version 3). The terms and conditions of this license are in the `LICENSE` file.
 
 Note that in the section "2. Basic Permissions.", the license gives you the
