@@ -1,5 +1,9 @@
 # Lorg
 
+_If you are reading this on GitHub or other Git repository or service, then you
+are looking at a mirror. The official repository is [this Fossil
+repository](https://dev.lorg.software/lorg)._
+
 Lorg is a hierarchical data manager. You define your data and their associated
 units in a text file, and Lorg automatically calculates the missing units.
 
